@@ -1,7 +1,7 @@
 // Middleware JWT: verifica token y agrega req.user
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { AuthJWT } from 'shared';
+import { AuthJWT } from '../types';
 
 declare global {
   namespace Express {

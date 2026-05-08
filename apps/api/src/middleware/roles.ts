@@ -1,6 +1,6 @@
 // Middleware de roles: verifica que el usuario tenga el rol requerido
 import { Request, Response, NextFunction } from 'express';
-import { Rol } from 'shared';
+import { Rol } from '../types';
 
 const jerarquia: Record<Rol, number> = {
   SUPER_ADMIN: 4,
