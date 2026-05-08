@@ -1,3 +1,4 @@
+'use client';
 // Página de error post-pago
 import Link from 'next/link';
 import { Header } from '@/components/Header';
