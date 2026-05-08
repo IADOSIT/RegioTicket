@@ -31,7 +31,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 
+# Standalone output (server.js + .next/ + package.json)
 COPY --from=builder /app/apps/web/.next/standalone ./
+# node_modules traced from monorepo root (Next.js standalone in monorepo needs these)
+COPY --from=builder /app/node_modules ./node_modules
+# Static assets and public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./.next/static
 COPY --from=builder /app/apps/web/public ./public
 
