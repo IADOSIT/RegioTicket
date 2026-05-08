@@ -1,0 +1,21 @@
+{
+  "name": "regioticket",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev:api": "npm run dev -w apps/api",
+    "dev:web": "npm run dev -w apps/web",
+    "build:api": "npm run build -w apps/api",
+    "build:web": "npm run build -w apps/web",
+    "db:generate": "npx prisma generate --schema=packages/db/schema.prisma",
+    "db:migrate": "npx prisma migrate deploy --schema=packages/db/schema.prisma",
+    "db:seed": "npx ts-node -P packages/db/tsconfig.json packages/db/seed.ts",
+    "db:studio": "npx prisma studio --schema=packages/db/schema.prisma"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2",
+    "prisma": "^5.9.1",
+    "@types/node": "^20.11.5"
+  }
+}

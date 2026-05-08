@@ -1,0 +1,181 @@
+// RegioTicket — Prisma Schema principal
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Rol {
+  SUPER_ADMIN
+  ADMIN
+  CAJERO
+  VALIDADOR
+}
+
+enum EstadoEvento {
+  BORRADOR
+  ACTIVO
+  PAUSADO
+  FINALIZADO
+}
+
+enum EstadoOrden {
+  PENDIENTE
+  PAGADA
+  EXPIRADA
+  REEMBOLSADA
+  FALLIDA
+}
+
+enum EstadoBoleto {
+  VALIDO
+  USADO
+  CANCELADO
+}
+
+enum CanalVenta {
+  ONLINE
+  TAQUILLA
+}
+
+enum FormaPago {
+  MERCADOPAGO
+  EFECTIVO
+  TARJETA
+  CORTESIA
+}
+
+enum TipoItem {
+  BOLETO
+  PRODUCTO
+}
+
+model Usuario {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  nombre    String
+  rol       Rol      @default(CAJERO)
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  eventos Evento[]
+  ordenes Orden[]  @relation("CajeroOrdenes")
+}
+
+model Evento {
+  id            String       @id @default(cuid())
+  slug          String       @unique
+  nombre        String
+  descripcion   String?
+  lugar         String
+  fechaEvento   DateTime
+  fechaFin      DateTime?
+  imagen        String?
+  estado        EstadoEvento @default(BORRADOR)
+  ventaOnline   Boolean      @default(true)
+  ventaTaquilla Boolean      @default(true)
+  organizadorId String
+  organizador   Usuario      @relation(fields: [organizadorId], references: [id])
+  categorias    Categoria[]
+  ordenes       Orden[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Categoria {
+  id             String    @id @default(cuid())
+  eventoId       String
+  evento         Evento    @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  nombre         String
+  precio         Decimal   @db.Decimal(10, 2)
+  totalBoletos   Int
+  disponibles    Int
+  activaOnline   Boolean   @default(true)
+  activaTaquilla Boolean   @default(true)
+  ordenDisplay   Int       @default(0)
+  items          ItemOrden[]
+  boletos        Boleto[]
+  createdAt      DateTime  @default(now())
+
+  @@index([eventoId])
+}
+
+model Producto {
+  id          String      @id @default(cuid())
+  nombre      String
+  descripcion String?
+  precio      Decimal     @db.Decimal(10, 2)
+  stock       Int         @default(0)
+  imagen      String?
+  activo      Boolean     @default(true)
+  eventoId    String?
+  items       ItemOrden[]
+  createdAt   DateTime    @default(now())
+}
+
+model Orden {
+  id              String      @id @default(cuid())
+  eventoId        String
+  evento          Evento      @relation(fields: [eventoId], references: [id])
+  canal           CanalVenta
+  formaPago       FormaPago
+  estado          EstadoOrden @default(PENDIENTE)
+  compradorNombre String?
+  compradorEmail  String?
+  compradorTel    String?
+  total           Decimal     @db.Decimal(10, 2)
+  mpPaymentId     String?
+  mpPreferenciaId String?
+  referenciaPago  String?
+  cajeroId        String?
+  cajero          Usuario?    @relation("CajeroOrdenes", fields: [cajeroId], references: [id])
+  items           ItemOrden[]
+  boletos         Boleto[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  expiresAt       DateTime?
+
+  @@index([eventoId, estado])
+  @@index([createdAt])
+}
+
+model ItemOrden {
+  id             String     @id @default(cuid())
+  ordenId        String
+  orden          Orden      @relation(fields: [ordenId], references: [id])
+  tipoItem       TipoItem
+  categoriaId    String?
+  categoria      Categoria? @relation(fields: [categoriaId], references: [id])
+  productoId     String?
+  producto       Producto?  @relation(fields: [productoId], references: [id])
+  cantidad       Int
+  precioUnitario Decimal    @db.Decimal(10, 2)
+  subtotal       Decimal    @db.Decimal(10, 2)
+}
+
+model Boleto {
+  id          String       @id @default(uuid())
+  ordenId     String
+  orden       Orden        @relation(fields: [ordenId], references: [id])
+  categoriaId String
+  categoria   Categoria    @relation(fields: [categoriaId], references: [id])
+  numero      Int
+  estado      EstadoBoleto @default(VALIDO)
+  accesos     Acceso[]
+  createdAt   DateTime     @default(now())
+
+  @@index([estado])
+}
+
+model Acceso {
+  id          String   @id @default(cuid())
+  boletoId    String
+  boleto      Boleto   @relation(fields: [boletoId], references: [id])
+  timestamp   DateTime @default(now())
+  validadorId String?
+  dispositivo String?
+}

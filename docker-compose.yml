@@ -1,0 +1,94 @@
+# RegioTicket — iaDoS · iados.mx
+# VPS: usa web_network existente, postgres_local externo, Redis propio
+# Puertos ocupados en host: 5010, 8088 — NO usarlos
+# Rollback: git checkout <commit> && docker compose up --build -d
+
+services:
+
+  regioticket_nginx:
+    image: nginx:alpine
+    container_name: regioticket_nginx
+    restart: unless-stopped
+    ports:
+      - "8089:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - web_network
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    depends_on:
+      - regioticket_web
+      - regioticket_api
+
+  regioticket_web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: regioticket_web
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - API_INTERNAL_URL=http://regioticket_api:4000
+    networks:
+      - web_network
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    depends_on:
+      - regioticket_api
+
+  regioticket_api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: regioticket_api
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=redis://regioticket_redis:6379
+      - JWT_SECRET=${JWT_SECRET}
+      - MP_ACCESS_TOKEN=${MP_ACCESS_TOKEN}
+      - MP_WEBHOOK_SECRET=${MP_WEBHOOK_SECRET}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - TWILIO_SID=${TWILIO_SID}
+      - TWILIO_TOKEN=${TWILIO_TOKEN}
+      - TWILIO_WHATSAPP=${TWILIO_WHATSAPP}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+    networks:
+      - web_network
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    depends_on:
+      - regioticket_redis
+
+  regioticket_redis:
+    image: redis:7-alpine
+    container_name: regioticket_redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --appendonly yes
+    volumes:
+      - regioticket_redis_data:/data
+    networks:
+      - web_network
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+
+volumes:
+  regioticket_redis_data:
+    name: regioticket_redis_data
+
+networks:
+  web_network:
+    external: true

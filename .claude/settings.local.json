@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Path \"C:\\\\sites\\\\regioticket\" -Force | ForEach-Object { $_.FullName })"
+    ]
+  }
+}
