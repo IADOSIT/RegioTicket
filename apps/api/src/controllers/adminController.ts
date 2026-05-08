@@ -4,7 +4,6 @@ import bcrypt from 'bcrypt';
 import { prisma, slugify } from '../utils/helpers';
 import { addSSEClient, setupSSEResponse } from '../services/sse';
 import { createObjectCsvStringifier } from 'csv-writer';
-import Decimal from 'decimal.js';
 
 // ──────────────────── EVENTOS ────────────────────
 
@@ -80,7 +79,7 @@ export async function crearCategoria(req: Request, res: Response) {
     const cat = await prisma.categoria.create({
       data: {
         eventoId,
-        precio: new Decimal(precio),
+        precio: Number(precio),
         totalBoletos,
         disponibles: disponibles ?? totalBoletos,
         ...rest,
@@ -95,7 +94,7 @@ export async function actualizarCategoria(req: Request, res: Response) {
     const { precio, ...rest } = req.body;
     const cat = await prisma.categoria.update({
       where: { id: req.params.id },
-      data: { ...rest, ...(precio ? { precio: new Decimal(precio) } : {}) },
+      data: { ...rest, ...(precio ? { precio: Number(precio) } : {}) },
     });
     res.json(cat);
   } catch { res.status(500).json({ error: 'Error actualizando categoría' }); }

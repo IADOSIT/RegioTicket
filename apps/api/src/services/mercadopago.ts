@@ -20,7 +20,8 @@ export async function crearPreferencia(opts: {
   const result = await preference.create({
     body: {
       external_reference: opts.ordenId,
-      items: opts.items.map((i) => ({
+      items: opts.items.map((i, idx) => ({
+        id: `item-${idx}`,
         title: i.titulo,
         quantity: i.cantidad,
         unit_price: i.precio,

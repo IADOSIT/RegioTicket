@@ -1,7 +1,10 @@
 {
   "name": "regioticket",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev:api": "npm run dev -w apps/api",
     "dev:web": "npm run dev -w apps/web",
@@ -17,5 +20,11 @@
     "ts-node": "^10.9.2",
     "prisma": "^5.9.1",
     "@types/node": "^20.11.5"
-  }
+  },
+  "version": "1.0.0",
+  "description": "Plataforma SaaS de venta de boletos para eventos en Nuevo León (palenques, bailes, conciertos).",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }

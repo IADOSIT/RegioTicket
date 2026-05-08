@@ -3,7 +3,6 @@ import { Request, Response } from 'express';
 import { prisma, calcularTotal } from '../utils/helpers';
 import { reservarStock, inicializarStock } from '../services/redis';
 import { crearPreferencia } from '../services/mercadopago';
-import Decimal from 'decimal.js';
 
 export async function crearOrden(req: Request, res: Response) {
   const { eventoId, items, compradorNombre, compradorEmail, compradorTel } = req.body;
@@ -53,7 +52,7 @@ export async function crearOrden(req: Request, res: Response) {
         compradorNombre,
         compradorEmail,
         compradorTel,
-        total: new Decimal(totalNum),
+        total: totalNum,
         expiresAt,
         items: {
           create: items.map((i: { categoriaId: string; cantidad: number }) => {
@@ -63,8 +62,8 @@ export async function crearOrden(req: Request, res: Response) {
               tipoItem: 'BOLETO',
               categoriaId: i.categoriaId,
               cantidad: i.cantidad,
-              precioUnitario: new Decimal(precio),
-              subtotal: new Decimal(precio * i.cantidad),
+              precioUnitario: precio,
+              subtotal: precio * i.cantidad,
             };
           }),
         },

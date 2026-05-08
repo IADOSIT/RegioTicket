@@ -1,7 +1,25 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(Get-ChildItem -Path \"C:\\\\sites\\\\regioticket\" -Force | ForEach-Object { $_.FullName })"
+      "PowerShell(Get-ChildItem -Path \"C:\\\\sites\\\\regioticket\" -Force | ForEach-Object { $_.FullName })",
+      "Bash(sshpass *)",
+      "Bash(python3 -c \"import subprocess; print\\('python ok'\\)\")",
+      "Bash(pacman -S --noconfirm sshpass)",
+      "Bash(pip install *)",
+      "PowerShell(pip install *)",
+      "PowerShell(npm list *)",
+      "PowerShell(npm install *)",
+      "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"echo CONECTADO && uname -a && whoami\" 2>&1)",
+      "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"docker ps --format 'table {{.Names}}\\\\t{{.Image}}\\\\t{{.Status}}\\\\t{{.Ports}}'\" 2>&1)",
+      "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"docker network ls && echo '---' && docker network inspect web_network --format '{{range .Containers}}{{.Name}} {{end}}'\" 2>&1)",
+      "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"ss -tlnp | grep '8089\\\\|5011' && echo 'PUERTOS_OK_LIBRES' || echo 'CONFLICTO'\" 2>&1)",
+      "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"ls /opt/stacks/ 2>/dev/null || ls /home/ && ls /root/ && find / -name 'regioticket' -maxdepth 5 -type d 2>/dev/null | head -5\" 2>&1)",
+      "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"find /home /opt /srv /var/www /root -name 'docker-compose.yml' -maxdepth 5 2>/dev/null | head -20\" 2>&1)",
+      "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"ls /home/administrador/apps/\" 2>&1)",
+      "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"openssl rand -hex 32 && openssl rand -hex 32\" 2>&1)",
+      "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"cd /home/administrador/apps/regioticket && docker compose build --no-cache 2>&1\" 2>&1)",
+      "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"cd /home/administrador/apps/regioticket && git pull\" 2>&1)",
+      "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"cd /home/administrador/apps/regioticket && docker compose build 2>&1\" 2>&1)"
     ]
   }
 }

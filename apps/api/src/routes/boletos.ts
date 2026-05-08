@@ -1,6 +1,6 @@
 // Rutas de boletos: consulta, PDF, reenvío y WhatsApp
 import { Router } from 'express';
-import { obtenerBoleto, descargarPDF, ticketTermico, reenviarEmail, whatsappLink } from '../controllers/boletosController';
+import { obtenerBoleto, descargarPDF, reenviarEmail, whatsappLink } from '../controllers/boletosController';
 import { publicLimiter } from '../middleware/rateLimit';
 
 const router = Router();

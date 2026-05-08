@@ -5,7 +5,6 @@ import { generarPDFBoleto } from '../services/pdf';
 import { enviarBoleto } from '../services/mailer';
 import { broadcastEvento } from '../services/sse';
 import { v4 as uuidv4 } from 'uuid';
-import Decimal from 'decimal.js';
 
 export async function eventosActivos(_req: Request, res: Response) {
   try {
@@ -64,7 +63,7 @@ export async function ventaTaquilla(req: Request, res: Response) {
           compradorTel: comprador?.telefono,
           referenciaPago,
           cajeroId,
-          total: new Decimal(totalNum),
+          total: totalNum,
           expiresAt: new Date(Date.now() + 30 * 60 * 1000),
           items: {
             create: items.map((i: { categoriaId: string; cantidad: number }) => {
@@ -74,8 +73,8 @@ export async function ventaTaquilla(req: Request, res: Response) {
                 tipoItem: 'BOLETO',
                 categoriaId: i.categoriaId,
                 cantidad: i.cantidad,
-                precioUnitario: new Decimal(precio),
-                subtotal: new Decimal(precio * i.cantidad),
+                precioUnitario: precio,
+                subtotal: precio * i.cantidad,
               };
             }),
           },
