@@ -45,7 +45,7 @@ export default function ValidacionPage() {
       if (info.estado === 'VALIDO') { setEstado('ok'); }
       else if (info.estado === 'USADO') { setEstado('usado'); }
       else { setEstado('error'); }
-      setHistorial((prev) => [{ uuid, resultado: info, tipo: info.estado === 'VALIDO' ? 'valido' : info.estado === 'USADO' ? 'usado' : 'error', ts: new Date() }, ...prev].slice(0, 10));
+      setHistorial((prev) => [{ uuid, resultado: info, tipo: (info.estado === 'VALIDO' ? 'valido' : info.estado === 'USADO' ? 'usado' : 'error') as AccesoItem['tipo'], ts: new Date() }, ...prev].slice(0, 10));
     } catch {
       setEstado('error');
       setBoletoInfo(null);
