@@ -21,6 +21,7 @@ export default function CheckoutPage() {
 
   const [step, setStep] = useState(1);
   const [evento, setEvento] = useState<any>(null);
+  const [eventoError, setEventoError] = useState(false);
   const [seleccion, setSeleccion] = useState<{ categoriaId: string; cantidad: number }[]>([]);
   const [comprador, setComprador] = useState({ nombre: '', email: '', tel: '' });
   const [timer, setTimer] = useState(TIMER_SEGUNDOS);
@@ -29,15 +30,14 @@ export default function CheckoutPage() {
   const timerRef = useRef<any>(null);
 
   useEffect(() => {
-    api.eventos.list().then((evs) => {
-      const ev = evs.find((e: any) => e.id === eventoId);
-      if (ev) {
+    api.eventos.get(eventoId as string)
+      .then((ev) => {
         setEvento(ev);
         if (catIdPreselect) {
           setSeleccion([{ categoriaId: catIdPreselect, cantidad: 1 }]);
         }
-      }
-    });
+      })
+      .catch(() => setEventoError(true));
   }, [eventoId, catIdPreselect]);
 
   useEffect(() => {
@@ -92,6 +92,14 @@ export default function CheckoutPage() {
 
   const minutos = String(Math.floor(timer / 60)).padStart(2, '0');
   const segundos = String(timer % 60).padStart(2, '0');
+
+  if (eventoError) return (
+    <>
+      <Header />
+      <div className="text-center py-20 text-gray-400"><p>Evento no encontrado.</p></div>
+      <Footer />
+    </>
+  );
 
   if (!evento) return (
     <>

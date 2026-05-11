@@ -113,7 +113,7 @@ export default function EventoPage() {
                   </div>
                   <Button
                     disabled={agotado}
-                    onClick={() => router.push(`/checkout/${evento.id}?cat=${cat.id}`)}
+                    onClick={() => router.push(`/checkout/${evento.slug}?cat=${cat.id}`)}
                     size="lg"
                   >
                     {agotado ? 'Agotado' : (
