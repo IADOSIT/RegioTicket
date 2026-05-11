@@ -8,15 +8,18 @@ async function main() {
   const hash = async (p: string) => bcrypt.hash(p, 10);
 
   const admin = await prisma.usuario.upsert({
-    where: { email: 'admin@regioticket.mx' },
-    update: {},
+    where: { email: 'admin@iados.mx' },
+    update: { password: await hash('admin123') },
     create: {
-      email: 'admin@regioticket.mx',
-      password: await hash('Admin123!'),
-      nombre: 'Administrador RegioTicket',
+      email: 'admin@iados.mx',
+      password: await hash('admin123'),
+      nombre: 'Administrador iaDoS',
       rol: Rol.SUPER_ADMIN,
     },
   });
+
+  // Eliminar usuario viejo si existe
+  await prisma.usuario.deleteMany({ where: { email: { in: ['admin@regioticket.mx', 'cajero@regioticket.mx'] } } });
 
   await prisma.usuario.upsert({
     where: { email: 'cajero@regioticket.mx' },
@@ -61,7 +64,7 @@ async function main() {
   }
 
   console.log('✅ Seed completado:');
-  console.log('   admin@regioticket.mx / Admin123!');
+  console.log('   admin@iados.mx / admin123');
   console.log('   cajero@regioticket.mx / Cajero123!');
   console.log('   Evento: Palenque Feria NL 2026');
 }
