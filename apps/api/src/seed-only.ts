@@ -89,7 +89,6 @@ async function main() {
     }
     console.log('✅ Evento:', n.nombre);
   }
-}
 
   // ── Config Sistema
   const configDefaults: Record<string, string> = {
