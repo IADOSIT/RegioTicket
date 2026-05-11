@@ -4,14 +4,19 @@ import { prisma } from '../utils/helpers';
 import { addSSEClient, setupSSEResponse } from '../services/sse';
 import { getStock } from '../services/redis';
 
-export async function listarEventos(_req: Request, res: Response) {
+export async function listarEventos(req: Request, res: Response) {
   try {
+    const ahora = new Date();
+    const pasados = req.query.pasados === '1';
+
+    const where = pasados
+      ? { OR: [{ estado: 'FINALIZADO' as const }, { estado: 'ACTIVO' as const, fechaEvento: { lt: ahora } }] }
+      : { estado: 'ACTIVO' as const, fechaEvento: { gte: ahora } };
+
     const eventos = await prisma.evento.findMany({
-      where: { estado: 'ACTIVO' },
-      include: {
-        categorias: { orderBy: { ordenDisplay: 'asc' } },
-      },
-      orderBy: { fechaEvento: 'asc' },
+      where,
+      include: { categorias: { orderBy: { ordenDisplay: 'asc' } } },
+      orderBy: { fechaEvento: pasados ? 'desc' : 'asc' },
     });
     res.json(eventos);
   } catch {

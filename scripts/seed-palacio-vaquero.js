@@ -1,4 +1,4 @@
-// Inserta 3 noches del Evento de Rodeo — Palacio Vaquero con Arturo Treviño
+// Inserta/actualiza 3 noches del Evento de Rodeo — Palacio Vaquero con Arturo Treviño
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
@@ -8,22 +8,22 @@ async function main() {
 
   const noches = [
     {
-      slug: 'palacio-vaquero-rodeo-abr30',
-      nombre: 'Palacio Vaquero — Rodeo · Jue 30 Abr',
-      fechaEvento: new Date('2026-04-30T20:00:00-06:00'),
-      fechaFin:    new Date('2026-05-01T02:30:00-06:00'),
+      slug: 'palacio-vaquero-rodeo-may25',
+      nombre: 'Palacio Vaquero — Rodeo · Lun 25 May',
+      fechaEvento: new Date('2026-05-25T20:00:00-06:00'),
+      fechaFin:    new Date('2026-05-26T02:30:00-06:00'),
     },
     {
-      slug: 'palacio-vaquero-rodeo-may01',
-      nombre: 'Palacio Vaquero — Rodeo · Vie 1° May',
-      fechaEvento: new Date('2026-05-01T20:00:00-06:00'),
-      fechaFin:    new Date('2026-05-02T02:30:00-06:00'),
+      slug: 'palacio-vaquero-rodeo-may26',
+      nombre: 'Palacio Vaquero — Rodeo · Mar 26 May',
+      fechaEvento: new Date('2026-05-26T20:00:00-06:00'),
+      fechaFin:    new Date('2026-05-27T02:30:00-06:00'),
     },
     {
-      slug: 'palacio-vaquero-rodeo-may02',
-      nombre: 'Palacio Vaquero — Rodeo · Sáb 2 May',
-      fechaEvento: new Date('2026-05-02T20:00:00-06:00'),
-      fechaFin:    new Date('2026-05-03T02:30:00-06:00'),
+      slug: 'palacio-vaquero-rodeo-may27',
+      nombre: 'Palacio Vaquero — Rodeo · Mié 27 May',
+      fechaEvento: new Date('2026-05-27T20:00:00-06:00'),
+      fechaFin:    new Date('2026-05-28T02:30:00-06:00'),
     },
   ];
 
@@ -33,10 +33,21 @@ async function main() {
     { nombre: 'VIP',        precio: 1500, totalBoletos: 50,  disponibles: 50,  ordenDisplay: 3 },
   ];
 
+  // Elimina entradas viejas con fechas pasadas si existen
+  const slugsViejos = ['palacio-vaquero-rodeo-abr30', 'palacio-vaquero-rodeo-may01', 'palacio-vaquero-rodeo-may02'];
+  for (const slug of slugsViejos) {
+    const viejo = await prisma.evento.findUnique({ where: { slug } });
+    if (viejo) {
+      await prisma.categoria.deleteMany({ where: { eventoId: viejo.id } });
+      await prisma.evento.delete({ where: { slug } });
+      console.log(`🗑  Eliminado: ${slug}`);
+    }
+  }
+
   for (const noche of noches) {
     const evento = await prisma.evento.upsert({
       where: { slug: noche.slug },
-      update: {},
+      update: { fechaEvento: noche.fechaEvento, fechaFin: noche.fechaFin, estado: 'ACTIVO' },
       create: {
         slug: noche.slug,
         nombre: noche.nombre,
@@ -62,8 +73,7 @@ async function main() {
     console.log(`✅ ${noche.nombre}`);
   }
 
-  console.log('\nPrecios insertados: General $400 · Preferente $800 · VIP $1,500');
-  console.log('Ajusta precios desde el panel admin si es necesario.');
+  console.log('\nPrecios: General $400 · Preferente $800 · VIP $1,500');
 }
 
 main()
