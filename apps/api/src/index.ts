@@ -1,5 +1,6 @@
 // Punto de entrada principal de la API RegioTicket
 import 'dotenv/config';
+import { startup } from './startup';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -36,7 +37,9 @@ app.use('/api/webhook', webhookRouter);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, ts: new Date() }));
 
-app.listen(PORT, () => {
-  console.log(`API RegioTicket escuchando en :${PORT}`);
-  startExpirarOrdenes();
+startup().then(() => {
+  app.listen(PORT, () => {
+    console.log(`API RegioTicket escuchando en :${PORT}`);
+    startExpirarOrdenes();
+  });
 });
