@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import { prisma, slugify } from '../utils/helpers';
 import { addSSEClient, setupSSEResponse } from '../services/sse';
 import { createObjectCsvStringifier } from 'csv-writer';
+import * as QRCodeLib from 'qrcode';
 
 // ──────────────────── EVENTOS ────────────────────
 
@@ -268,10 +269,9 @@ export async function getQREvento(req: Request, res: Response) {
     const evento = await prisma.evento.findUnique({ where: { id: req.params.id }, select: { slug: true, nombre: true } });
     if (!evento) return res.status(404).json({ error: 'Evento no encontrado' });
 
-    const QRCode = await import('qrcode');
     const baseUrl = process.env.NEXTAUTH_URL || 'https://regioticket.iados.online';
     const url = `${baseUrl}/eventos/${evento.slug}`;
-    const qrDataUrl = await QRCode.default.toDataURL(url, { width: 400, margin: 2, color: { dark: '#0f172a', light: '#ffffff' } });
+    const qrDataUrl = await QRCodeLib.toDataURL(url, { width: 400, margin: 2, color: { dark: '#0f172a', light: '#ffffff' } });
     res.json({ qr: qrDataUrl, url, nombre: evento.nombre });
   } catch { res.status(500).json({ error: 'Error generando QR' }); }
 }

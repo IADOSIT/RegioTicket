@@ -13,6 +13,7 @@ import taquillaRouter from './routes/taquilla';
 import adminRouter from './routes/admin';
 import webhookRouter from './routes/webhook';
 import { startExpirarOrdenes } from './jobs/expirarOrdenes';
+import { prisma } from './utils/helpers';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -39,9 +40,8 @@ app.get('/api/health', (_req, res) => res.json({ ok: true, ts: new Date() }));
 // Config pública (sin auth) — solo datos de contacto para el footer
 app.get('/api/config/public', async (_req, res) => {
   try {
-    const { prisma } = await import('./utils/helpers');
     const rows = await prisma.configSistema.findMany();
-    const cfg = Object.fromEntries(rows.map((r: any) => [r.clave, r.valor]));
+    const cfg = Object.fromEntries(rows.map((r) => [r.clave, r.valor]));
     res.json(cfg);
   } catch { res.json({}); }
 });
