@@ -73,6 +73,10 @@ export const api = {
       toggleTaquilla: (id: string, token: string) =>
         request<any>(`/admin/categorias/${id}/toggle-taquilla`, { method: 'PUT', headers: authHeaders(token) }),
     },
+    mapa: {
+      get:  (eventoId: string, token: string) => request<any>(`/admin/mapa/${eventoId}`, { headers: authHeaders(token) }),
+      save: (eventoId: string, body: object, token: string) => request<any>(`/admin/mapa/${eventoId}`, { method: 'PUT', body: JSON.stringify(body), headers: authHeaders(token) }),
+    },
     ordenes: {
       list: (params: Record<string, string>, token: string) => {
         const qs = new URLSearchParams(params).toString();

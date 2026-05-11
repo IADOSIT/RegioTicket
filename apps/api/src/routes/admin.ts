@@ -5,6 +5,7 @@ import {
   listarCategorias, crearCategoria, actualizarCategoria, toggleOnline, toggleTaquilla,
   listarOrdenes, exportarOrdenes, dashboardStream,
   listarUsuarios, crearUsuario, actualizarUsuario,
+  getMapa, saveMapa,
 } from '../controllers/adminController';
 import { requireAuth } from '../middleware/auth';
 import { requireRol } from '../middleware/roles';
@@ -63,5 +64,8 @@ router.get('/dashboard/:eventoId', dashboardStream);
 router.get('/usuarios', listarUsuarios);
 router.post('/usuarios', validate(usuarioSchema), crearUsuario);
 router.put('/usuarios/:id', validate(usuarioSchema), actualizarUsuario);
+
+router.get('/mapa/:eventoId', getMapa);
+router.put('/mapa/:eventoId', saveMapa);
 
 export default router;

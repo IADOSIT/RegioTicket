@@ -237,6 +237,27 @@ async function calcularMetricas(eventoId: string) {
   };
 }
 
+// ──────────────────── MAPA VENUE ────────────────────
+
+export async function getMapa(req: Request, res: Response) {
+  try {
+    const mapa = await prisma.mapaVenue.findUnique({ where: { eventoId: req.params.eventoId } });
+    res.json(mapa ?? { elementos: [], anchoM: 20, altoM: 15 });
+  } catch { res.status(500).json({ error: 'Error obteniendo mapa' }); }
+}
+
+export async function saveMapa(req: Request, res: Response) {
+  try {
+    const { elementos, anchoM, altoM } = req.body;
+    const mapa = await prisma.mapaVenue.upsert({
+      where:  { eventoId: req.params.eventoId },
+      update: { elementos, anchoM, altoM },
+      create: { eventoId: req.params.eventoId, elementos: elementos ?? [], anchoM: anchoM ?? 20, altoM: altoM ?? 15 },
+    });
+    res.json(mapa);
+  } catch { res.status(500).json({ error: 'Error guardando mapa' }); }
+}
+
 // ──────────────────── USUARIOS ────────────────────
 
 export async function listarUsuarios(_req: Request, res: Response) {

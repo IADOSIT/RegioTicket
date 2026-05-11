@@ -19,7 +19,21 @@
       "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"openssl rand -hex 32 && openssl rand -hex 32\" 2>&1)",
       "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"cd /home/administrador/apps/regioticket && docker compose build --no-cache 2>&1\" 2>&1)",
       "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"cd /home/administrador/apps/regioticket && git pull\" 2>&1)",
-      "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"cd /home/administrador/apps/regioticket && docker compose build 2>&1\" 2>&1)"
+      "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"cd /home/administrador/apps/regioticket && docker compose build 2>&1\" 2>&1)",
+      "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"cd /home/administrador/apps/regioticket && git pull && docker compose build 2>&1\" 2>&1)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(node *)",
+      "PowerShell($b64 = [Convert]::ToBase64String\\([System.IO.File]::ReadAllBytes\\(\"C:\\\\tmp\\\\seed.js\"\\)\\); Write-Output $b64)",
+      "Bash(git ls-tree *)",
+      "PowerShell(Copy-Item *)",
+      "WebSearch",
+      "WebFetch(domain:www.elpalaciodelvaquero.com)",
+      "WebFetch(domain:www.facebook.com)",
+      "Bash(copy \"C:\\\\sites\\\\regioticket\\\\programa.jpg\" \"C:\\\\sites\\\\regioticket\\\\apps\\\\web\\\\public\\\\eventos\\\\palacio-vaquero-rodeo.jpg\")",
+      "Bash(mkdir -p /c/sites/regioticket/apps/web/public/eventos)",
+      "Bash(cp \"/c/sites/regioticket/programa.jpg\" \"/c/sites/regioticket/apps/web/public/eventos/palacio-vaquero-rodeo.jpg\")"
     ]
   }
 }
