@@ -62,6 +62,8 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/db/schema.prisma ./packages/db/schema.prisma
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/package.json ./apps/api/
+COPY apps/api/entrypoint.sh ./entrypoint.sh
+RUN chmod +x entrypoint.sh
 
 EXPOSE 4000
-CMD ["node", "apps/api/dist/index.js"]
+CMD ["sh", "entrypoint.sh"]
