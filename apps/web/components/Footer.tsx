@@ -9,7 +9,12 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="md:col-span-1">
-            <Image src="/logo-white.png" alt="RegioTicket" width={120} height={32} className="h-8 w-auto mb-3" />
+            <div className="flex items-center gap-2 mb-3">
+              <div className="bg-white rounded-lg p-1">
+                <Image src="/logo.png" alt="iaDoS" width={28} height={28} className="h-7 w-auto" />
+              </div>
+              <span className="text-white font-extrabold text-lg">Regio<span className="text-green-400">Ticket</span></span>
+            </div>
             <p className="text-sm text-slate-400 leading-relaxed">
               La plataforma líder de boletería para eventos en Nuevo León. Compra en línea o en taquilla.
             </p>

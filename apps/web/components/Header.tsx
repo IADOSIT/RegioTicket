@@ -12,7 +12,12 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center gap-4">
         {/* Logo */}
         <Link href="/" className="flex-shrink-0 flex items-center gap-2">
-          <Image src="/logo-white.png" alt="RegioTicket" width={130} height={34} priority className="h-8 w-auto" />
+          <div className="bg-white rounded-xl px-2 py-1">
+            <Image src="/logo.png" alt="RegioTicket" width={36} height={36} priority className="h-9 w-auto" />
+          </div>
+          <span className="text-white font-extrabold text-lg tracking-tight hidden sm:block">
+            Regio<span className="text-green-400">Ticket</span>
+          </span>
         </Link>
 
         {/* Search bar */}

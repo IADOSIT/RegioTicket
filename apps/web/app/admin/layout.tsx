@@ -4,7 +4,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { LayoutDashboardIcon, CalendarIcon, UsersIcon, QrCodeIcon, LogOutIcon, ShoppingBagIcon, MapIcon } from 'lucide-react';
+import { LayoutDashboardIcon, CalendarIcon, UsersIcon, QrCodeIcon, LogOutIcon } from 'lucide-react';
 import { SessionProvider } from 'next-auth/react';
 
 function AdminLayoutInner({ children }: { children: React.ReactNode }) {
@@ -27,8 +27,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboardIcon },
     { href: '/admin/eventos', label: 'Eventos', icon: CalendarIcon },
     { href: '/admin/usuarios', label: 'Usuarios', icon: UsersIcon },
-    { href: '/admin/validacion', label: 'Validación', icon: QrCodeIcon },
-    { href: '/admin/eventos', label: 'Mapa venue', icon: MapIcon },
+    { href: '/admin/validacion', label: 'Validación QR', icon: QrCodeIcon },
   ];
 
   return (
