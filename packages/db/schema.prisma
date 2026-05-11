@@ -60,6 +60,50 @@ enum TipoDistribucion {
   MESA
 }
 
+// ─── MULTI-TENANT ───────────────────────────────────────────────────────────
+
+model Empresa {
+  id        String   @id @default(cuid())
+  nombre    String
+  slug      String   @unique
+  logo      String?
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  usuarios  Usuario[]
+  eventos   Evento[]
+  ordenes   Orden[]
+  config    ConfigEmpresa?
+}
+
+model ConfigEmpresa {
+  id                  String   @id @default(cuid())
+  empresaId           String   @unique
+  empresa             Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  // Email SMTP
+  smtpHost            String?
+  smtpPort            Int      @default(587)
+  smtpUser            String?
+  smtpPass            String?
+  smtpFrom            String?
+  smtpFromNombre      String?
+
+  // WhatsApp
+  waProvider          String   @default("link")  // link | meta
+  waToken             String?
+  waPhoneId           String?
+  waFrom              String?
+
+  // Ventana de validación (horas)
+  ventanaAntesHoras   Int      @default(4)
+  ventanaDespuesHoras Int      @default(2)
+
+  updatedAt           DateTime @updatedAt
+}
+
+// ─── USUARIOS ───────────────────────────────────────────────────────────────
+
 model Usuario {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -69,9 +113,16 @@ model Usuario {
   activo    Boolean  @default(true)
   createdAt DateTime @default(now())
 
+  empresaId String?
+  empresa   Empresa? @relation(fields: [empresaId], references: [id])
+
   eventos Evento[]
   ordenes Orden[]  @relation("CajeroOrdenes")
+
+  @@index([empresaId])
 }
+
+// ─── EVENTOS ────────────────────────────────────────────────────────────────
 
 model Evento {
   id            String       @id @default(cuid())
@@ -87,32 +138,42 @@ model Evento {
   ventaTaquilla Boolean      @default(true)
   organizadorId String
   organizador   Usuario      @relation(fields: [organizadorId], references: [id])
-  categorias    Categoria[]
-  ordenes       Orden[]
-  mapaVenue     MapaVenue?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+
+  empresaId String?
+  empresa   Empresa? @relation(fields: [empresaId], references: [id])
+
+  categorias Categoria[]
+  ordenes    Orden[]
+  mapaVenue  MapaVenue?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([empresaId])
 }
 
+// ─── CATEGORÍAS ─────────────────────────────────────────────────────────────
+
 model Categoria {
-  id             String    @id @default(cuid())
-  eventoId       String
-  evento         Evento    @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  nombre         String
-  precio         Decimal   @db.Decimal(10, 2)
-  totalBoletos   Int
-  disponibles    Int
+  id                String           @id @default(cuid())
+  eventoId          String
+  evento            Evento           @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  nombre            String
+  precio            Decimal          @db.Decimal(10, 2)
+  totalBoletos      Int
+  disponibles       Int
   activaOnline      Boolean          @default(true)
   activaTaquilla    Boolean          @default(true)
   ordenDisplay      Int              @default(0)
   tipoDistribucion  TipoDistribucion @default(GENERAL)
   capacidadMesa     Int?
   items             ItemOrden[]
-  boletos        Boleto[]
-  createdAt      DateTime  @default(now())
+  boletos           Boleto[]
+  createdAt         DateTime         @default(now())
 
   @@index([eventoId])
 }
+
+// ─── PRODUCTOS ──────────────────────────────────────────────────────────────
 
 model Producto {
   id          String      @id @default(cuid())
@@ -127,30 +188,37 @@ model Producto {
   createdAt   DateTime    @default(now())
 }
 
+// ─── ÓRDENES ────────────────────────────────────────────────────────────────
+
 model Orden {
-  id              String      @id @default(cuid())
-  eventoId        String
-  evento          Evento      @relation(fields: [eventoId], references: [id])
-  canal           CanalVenta
-  formaPago       FormaPago
-  estado          EstadoOrden @default(PENDIENTE)
+  id                 String      @id @default(cuid())
+  eventoId           String
+  evento             Evento      @relation(fields: [eventoId], references: [id])
+  canal              CanalVenta
+  formaPago          FormaPago
+  estado             EstadoOrden @default(PENDIENTE)
   compradorNombre    String?
   compradorEmail     String?
   compradorTel       String?
   compradorWhatsapp  String?
-  total           Decimal     @db.Decimal(10, 2)
-  mpPaymentId     String?
-  mpPreferenciaId String?
-  referenciaPago  String?
-  cajeroId        String?
-  cajero          Usuario?    @relation("CajeroOrdenes", fields: [cajeroId], references: [id])
-  items           ItemOrden[]
-  boletos         Boleto[]
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  expiresAt       DateTime?
+  total              Decimal     @db.Decimal(10, 2)
+  mpPaymentId        String?
+  mpPreferenciaId    String?
+  referenciaPago     String?
+  cajeroId           String?
+  cajero             Usuario?    @relation("CajeroOrdenes", fields: [cajeroId], references: [id])
+
+  empresaId String?
+  empresa   Empresa? @relation(fields: [empresaId], references: [id])
+
+  items     ItemOrden[]
+  boletos   Boleto[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  expiresAt DateTime?
 
   @@index([eventoId, estado])
+  @@index([empresaId, estado])
   @@index([createdAt])
 }
 
@@ -168,19 +236,38 @@ model ItemOrden {
   subtotal       Decimal    @db.Decimal(10, 2)
 }
 
+// ─── BOLETOS ────────────────────────────────────────────────────────────────
+
 model Boleto {
-  id          String       @id @default(uuid())
-  ordenId     String
-  orden       Orden        @relation(fields: [ordenId], references: [id])
-  categoriaId String
-  categoria   Categoria    @relation(fields: [categoriaId], references: [id])
-  numero      Int
-  estado      EstadoBoleto @default(VALIDO)
-  accesos     Acceso[]
-  createdAt   DateTime     @default(now())
+  id               String       @id @default(uuid())
+  ordenId          String
+  orden            Orden        @relation(fields: [ordenId], references: [id])
+  categoriaId      String
+  categoria        Categoria    @relation(fields: [categoriaId], references: [id])
+  numero           Int
+  estado           EstadoBoleto @default(VALIDO)
+  qrFirma          String?
+  intentosFallidos Int          @default(0)
+  accesos          Acceso[]
+  createdAt        DateTime     @default(now())
 
   @@index([estado])
 }
+
+// ─── ACCESOS ────────────────────────────────────────────────────────────────
+
+model Acceso {
+  id          String   @id @default(cuid())
+  boletoId    String
+  boleto      Boleto   @relation(fields: [boletoId], references: [id])
+  timestamp   DateTime @default(now())
+  validadorId String?
+  dispositivo String?
+  exitoso     Boolean  @default(true)
+  motivo      String?
+}
+
+// ─── CONFIGURACIÓN ──────────────────────────────────────────────────────────
 
 model ConfigSistema {
   id    String @id @default(cuid())
@@ -196,13 +283,4 @@ model MapaVenue {
   anchoM    Float    @default(20)
   altoM     Float    @default(15)
   updatedAt DateTime @updatedAt
-}
-
-model Acceso {
-  id          String   @id @default(cuid())
-  boletoId    String
-  boleto      Boleto   @relation(fields: [boletoId], references: [id])
-  timestamp   DateTime @default(now())
-  validadorId String?
-  dispositivo String?
 }

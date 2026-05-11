@@ -7,6 +7,21 @@ const prisma = new PrismaClient();
 async function main() {
   const hash = (p: string) => bcrypt.hash(p, 10);
 
+  // ── Empresa principal
+  const empresa = await prisma.empresa.upsert({
+    where:  { slug: 'regioticket' },
+    update: { nombre: 'RegioTicket' },
+    create: { nombre: 'RegioTicket', slug: 'regioticket', activo: true },
+  });
+  console.log('✅ Empresa:', empresa.nombre);
+
+  // Config empresa por defecto
+  await prisma.configEmpresa.upsert({
+    where:  { empresaId: empresa.id },
+    update: {},
+    create: { empresaId: empresa.id },
+  });
+
   // ── Admin principal
   const admin = await prisma.usuario.upsert({
     where:  { email: 'admin@iados.mx' },
@@ -17,6 +32,7 @@ async function main() {
       nombre:   'Administrador iaDoS',
       rol:      'SUPER_ADMIN',
       activo:   true,
+      empresaId: null,
     },
   });
   console.log('✅ Admin:', admin.email);
@@ -24,20 +40,40 @@ async function main() {
   // ── Cajero demo
   const cajero = await prisma.usuario.upsert({
     where:  { email: 'cajero@regioticket.mx' },
-    update: {},
+    update: { empresaId: empresa.id },
     create: {
       email:    'cajero@regioticket.mx',
       password: await hash('Cajero123!'),
       nombre:   'Cajero Demo',
       rol:      'CAJERO',
+      empresaId: empresa.id,
     },
   });
   console.log('✅ Cajero:', cajero.email);
 
+  // ── Migrar registros existentes sin empresaId
+  const [eventosHuerfanos, ordenesHuerfanas, usuariosHuerfanos] = await Promise.all([
+    prisma.evento.count({ where: { empresaId: null } }),
+    prisma.orden.count({ where: { empresaId: null } }),
+    prisma.usuario.count({ where: { empresaId: null, rol: { not: 'SUPER_ADMIN' } } }),
+  ]);
+  if (eventosHuerfanos > 0) {
+    await prisma.evento.updateMany({ where: { empresaId: null }, data: { empresaId: empresa.id } });
+    console.log(`✅ Migrados ${eventosHuerfanos} eventos → ${empresa.nombre}`);
+  }
+  if (ordenesHuerfanas > 0) {
+    await prisma.orden.updateMany({ where: { empresaId: null }, data: { empresaId: empresa.id } });
+    console.log(`✅ Migradas ${ordenesHuerfanas} órdenes → ${empresa.nombre}`);
+  }
+  if (usuariosHuerfanos > 0) {
+    await prisma.usuario.updateMany({ where: { empresaId: null, rol: { not: 'SUPER_ADMIN' } }, data: { empresaId: empresa.id } });
+    console.log(`✅ Migrados ${usuariosHuerfanos} usuarios → ${empresa.nombre}`);
+  }
+
   // ── Palenque Feria NL
   const palenque = await prisma.evento.upsert({
     where:  { slug: 'palenque-feria-nl-2026' },
-    update: {},
+    update: { empresaId: empresa.id },
     create: {
       slug:         'palenque-feria-nl-2026',
       nombre:       'Palenque Feria NL 2026',
@@ -48,6 +84,7 @@ async function main() {
       imagen:       '/placeholder-evento.jpg',
       estado:       'ACTIVO',
       organizadorId: admin.id,
+      empresaId:    empresa.id,
     },
   });
   for (const cat of [
@@ -69,7 +106,7 @@ async function main() {
   for (const n of noches) {
     const ev = await prisma.evento.upsert({
       where:  { slug: n.slug },
-      update: {},
+      update: { empresaId: empresa.id },
       create: {
         ...n,
         descripcion:   'Arturo Treviño presenta su Evento de Rodeo. ¡Lo más vaquero de Monterrey!',
@@ -77,6 +114,7 @@ async function main() {
         imagen:        '/eventos/palacio-vaquero-rodeo.jpg',
         estado:        'ACTIVO',
         organizadorId: admin.id,
+        empresaId:     empresa.id,
       },
     });
     for (const cat of [

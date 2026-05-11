@@ -1,79 +1,94 @@
-// Envío de emails con Nodemailer — boletos y confirmaciones
+// Envío de emails con Nodemailer — SMTP configurable por empresa
 import nodemailer from 'nodemailer';
 
-function getTransport() {
+export interface SmtpConfig {
+  host?: string;
+  port?: number;
+  user?: string;
+  pass?: string;
+  from?: string;
+  fromNombre?: string;
+}
+
+function getTransport(cfg?: SmtpConfig) {
+  const host = cfg?.host || process.env.SMTP_HOST || 'smtp.gmail.com';
+  const port = cfg?.port || parseInt(process.env.SMTP_PORT || '587');
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: false,
+    host,
+    port,
+    secure: port === 465,
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+      user: cfg?.user || process.env.SMTP_USER,
+      pass: cfg?.pass || process.env.SMTP_PASS,
     },
   });
 }
 
+function fromField(cfg?: SmtpConfig) {
+  const nombre = cfg?.fromNombre || 'RegioTicket';
+  const email  = cfg?.from || process.env.SMTP_USER || 'noreply@regioticket.mx';
+  return `"${nombre}" <${email}>`;
+}
+
+function htmlBoleto(nombre: string, evento: string, boletoUUID: string, baseUrl: string) {
+  const url = `${baseUrl}/boleto/${boletoUUID}`;
+  return `
+  <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+    <div style="background:#0f172a;padding:24px 32px;text-align:center;">
+      <span style="font-size:24px;font-weight:800;color:#fff;">Regio<span style="color:#4ade80;">Ticket</span></span>
+    </div>
+    <div style="padding:32px;">
+      <h2 style="color:#111827;margin:0 0 8px;">¡Tu boleto está listo!</h2>
+      <p style="color:#6b7280;margin:0 0 24px;">Hola <strong>${nombre}</strong>, tu compra fue exitosa.</p>
+      <div style="background:#f9fafb;border-radius:8px;padding:16px;margin-bottom:24px;">
+        <p style="margin:0;font-size:14px;color:#374151;">Evento: <strong>${evento}</strong></p>
+        <p style="margin:8px 0 0;font-size:13px;color:#6b7280;">Adjunto encontrarás tu boleto en PDF. Presenta el código QR en la entrada.</p>
+      </div>
+      <a href="${url}" style="display:inline-block;background:#16a34a;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Ver mi boleto online</a>
+      <p style="margin-top:24px;font-size:12px;color:#9ca3af;">Este boleto es personal e intransferible. Cualquier reproducción no autorizada será rechazada.</p>
+    </div>
+    <div style="background:#f9fafb;padding:16px 32px;text-align:center;font-size:11px;color:#9ca3af;">
+      Desarrollado por <a href="https://iados.mx" style="color:#16a34a;">iaDoS</a> · iados.mx
+    </div>
+  </div>`;
+}
+
 export async function enviarBoleto(opts: {
-  to: string;
-  nombre: string;
-  evento: string;
-  pdfBuffer: Buffer;
-  boletoUUID: string;
+  to: string; nombre: string; evento: string;
+  pdfBuffer: Buffer; boletoUUID: string;
+  smtpConfig?: SmtpConfig; baseUrl?: string;
 }) {
-  const transporter = getTransport();
+  const transporter = getTransport(opts.smtpConfig);
+  const base = opts.baseUrl || process.env.NEXTAUTH_URL || 'https://regioticket.iados.online';
   await transporter.sendMail({
-    from: `"RegioTicket" <${process.env.SMTP_USER}>`,
+    from: fromField(opts.smtpConfig),
     to: opts.to,
     subject: `Tu boleto para ${opts.evento} — RegioTicket`,
-    html: `
-      <div style="font-family:Inter,sans-serif;max-width:560px;margin:auto;padding:32px;background:#fff;">
-        <h1 style="color:#16a34a;margin-bottom:8px;">RegioTicket</h1>
-        <p style="color:#111827;">Hola <strong>${opts.nombre}</strong>,</p>
-        <p style="color:#6b7280;margin:16px 0;">
-          Tu compra fue exitosa. Adjunto encontrarás tu boleto en PDF para <strong>${opts.evento}</strong>.
-        </p>
-        <p style="color:#6b7280;font-size:13px;">
-          Presenta el código QR en la entrada del evento.
-        </p>
-        <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;"/>
-        <p style="font-size:12px;color:#9ca3af;">Desarrollado por iaDoS · iados.mx</p>
-      </div>
-    `,
-    attachments: [
-      {
-        filename: `boleto-${opts.boletoUUID.slice(0, 8)}.pdf`,
-        content: opts.pdfBuffer,
-        contentType: 'application/pdf',
-      },
-    ],
+    html: htmlBoleto(opts.nombre, opts.evento, opts.boletoUUID, base),
+    attachments: [{
+      filename: `boleto-${opts.boletoUUID.slice(0, 8)}.pdf`,
+      content: opts.pdfBuffer,
+      contentType: 'application/pdf',
+    }],
   });
 }
 
 export async function enviarReenvio(opts: {
-  to: string;
-  nombre: string;
-  evento: string;
-  pdfBuffer: Buffer;
-  boletoUUID: string;
+  to: string; nombre: string; evento: string;
+  pdfBuffer: Buffer; boletoUUID: string;
+  smtpConfig?: SmtpConfig; baseUrl?: string;
 }) {
-  const transporter = getTransport();
+  const transporter = getTransport(opts.smtpConfig);
+  const base = opts.baseUrl || process.env.NEXTAUTH_URL || 'https://regioticket.iados.online';
   await transporter.sendMail({
-    from: `"RegioTicket" <${process.env.SMTP_USER}>`,
+    from: fromField(opts.smtpConfig),
     to: opts.to,
     subject: `Reenvío de boleto — ${opts.evento}`,
-    html: `
-      <div style="font-family:Inter,sans-serif;max-width:560px;margin:auto;padding:32px;background:#fff;">
-        <h1 style="color:#16a34a;">RegioTicket</h1>
-        <p>Hola <strong>${opts.nombre}</strong>, aquí va el reenvío de tu boleto para <strong>${opts.evento}</strong>.</p>
-        <p style="font-size:12px;color:#9ca3af;margin-top:24px;">Desarrollado por iaDoS · iados.mx</p>
-      </div>
-    `,
-    attachments: [
-      {
-        filename: `boleto-${opts.boletoUUID.slice(0, 8)}.pdf`,
-        content: opts.pdfBuffer,
-        contentType: 'application/pdf',
-      },
-    ],
+    html: htmlBoleto(opts.nombre, opts.evento, opts.boletoUUID, base),
+    attachments: [{
+      filename: `boleto-${opts.boletoUUID.slice(0, 8)}.pdf`,
+      content: opts.pdfBuffer,
+      contentType: 'application/pdf',
+    }],
   });
 }

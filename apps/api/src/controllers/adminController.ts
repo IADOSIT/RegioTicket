@@ -6,11 +6,18 @@ import { addSSEClient, setupSSEResponse } from '../services/sse';
 import { createObjectCsvStringifier } from 'csv-writer';
 import * as QRCodeLib from 'qrcode';
 
+// Scope helper — SUPER_ADMIN ve todo, los demás solo su empresa
+function ew(req: Request) {
+  if (req.user!.rol === 'SUPER_ADMIN') return {};
+  return { empresaId: req.user!.empresaId! };
+}
+
 // ──────────────────── EVENTOS ────────────────────
 
-export async function listarEventosAdmin(_req: Request, res: Response) {
+export async function listarEventosAdmin(req: Request, res: Response) {
   try {
     const eventos = await prisma.evento.findMany({
+      where: ew(req),
       include: { categorias: true, _count: { select: { ordenes: true } } },
       orderBy: { createdAt: 'desc' },
     });
@@ -21,6 +28,7 @@ export async function listarEventosAdmin(_req: Request, res: Response) {
 export async function crearEvento(req: Request, res: Response) {
   try {
     const { nombre, slug, ...rest } = req.body;
+    const empresaId = req.user!.rol === 'SUPER_ADMIN' ? (rest.empresaId ?? null) : req.user!.empresaId;
     const evento = await prisma.evento.create({
       data: {
         nombre,
@@ -29,6 +37,7 @@ export async function crearEvento(req: Request, res: Response) {
         fechaEvento: new Date(rest.fechaEvento),
         fechaFin: rest.fechaFin ? new Date(rest.fechaFin) : undefined,
         organizadorId: req.user!.sub,
+        empresaId,
       },
     });
     res.status(201).json(evento);
@@ -40,9 +49,9 @@ export async function crearEvento(req: Request, res: Response) {
 
 export async function actualizarEvento(req: Request, res: Response) {
   try {
-    const { fechaEvento, fechaFin, ...rest } = req.body;
+    const { fechaEvento, fechaFin, empresaId: _eid, ...rest } = req.body;
     const evento = await prisma.evento.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id, ...ew(req) },
       data: {
         ...rest,
         ...(fechaEvento ? { fechaEvento: new Date(fechaEvento) } : {}),
@@ -55,7 +64,7 @@ export async function actualizarEvento(req: Request, res: Response) {
 
 export async function eliminarEvento(req: Request, res: Response) {
   try {
-    await prisma.evento.delete({ where: { id: req.params.id } });
+    await prisma.evento.delete({ where: { id: req.params.id, ...ew(req) } });
     res.json({ ok: true });
   } catch { res.status(500).json({ error: 'Error eliminando evento' }); }
 }
@@ -78,13 +87,7 @@ export async function crearCategoria(req: Request, res: Response) {
     const { eventoId, precio, totalBoletos, disponibles, ...rest } = req.body;
     if (!eventoId) return res.status(400).json({ error: 'eventoId requerido' });
     const cat = await prisma.categoria.create({
-      data: {
-        eventoId,
-        precio: Number(precio),
-        totalBoletos,
-        disponibles: disponibles ?? totalBoletos,
-        ...rest,
-      },
+      data: { eventoId, precio: Number(precio), totalBoletos, disponibles: disponibles ?? totalBoletos, ...rest },
     });
     res.status(201).json(cat);
   } catch { res.status(500).json({ error: 'Error creando categoría' }); }
@@ -125,7 +128,7 @@ export async function listarOrdenes(req: Request, res: Response) {
   try {
     const { eventoId, estado, canal, page = '1', limit = '50' } = req.query;
     const skip = (parseInt(String(page)) - 1) * parseInt(String(limit));
-    const where: any = {};
+    const where: any = { ...ew(req) };
     if (eventoId) where.eventoId = String(eventoId);
     if (estado) where.estado = String(estado);
     if (canal) where.canal = String(canal);
@@ -147,8 +150,11 @@ export async function listarOrdenes(req: Request, res: Response) {
 export async function exportarOrdenes(req: Request, res: Response) {
   try {
     const { eventoId } = req.query;
+    const where: any = { ...ew(req) };
+    if (eventoId) where.eventoId = String(eventoId);
+
     const ordenes = await prisma.orden.findMany({
-      where: eventoId ? { eventoId: String(eventoId) } : undefined,
+      where,
       include: { items: { include: { categoria: true } }, evento: { select: { nombre: true } } },
       orderBy: { createdAt: 'desc' },
     });
@@ -162,6 +168,7 @@ export async function exportarOrdenes(req: Request, res: Response) {
         { id: 'estado', title: 'Estado' },
         { id: 'compradorNombre', title: 'Comprador' },
         { id: 'compradorEmail', title: 'Email' },
+        { id: 'compradorWhatsapp', title: 'WhatsApp' },
         { id: 'total', title: 'Total' },
         { id: 'createdAt', title: 'Fecha' },
       ],
@@ -175,6 +182,7 @@ export async function exportarOrdenes(req: Request, res: Response) {
       estado: o.estado,
       compradorNombre: o.compradorNombre ?? '',
       compradorEmail: o.compradorEmail ?? '',
+      compradorWhatsapp: o.compradorWhatsapp ?? '',
       total: Number(o.total),
       createdAt: o.createdAt.toISOString(),
     }));
@@ -192,7 +200,6 @@ export async function dashboardStream(req: Request, res: Response) {
   setupSSEResponse(res);
   addSSEClient(res, `admin:${eventoId}`);
 
-  // Enviar métricas iniciales
   try {
     const metricas = await calcularMetricas(eventoId);
     res.write(`data: ${JSON.stringify({ tipo: 'metricas', ...metricas })}\n\n`);
@@ -221,7 +228,7 @@ async function calcularMetricas(eventoId: string) {
   ]);
 
   return {
-    vendidosHoy: ordenesHoy.reduce((a, o) => a + 1, 0),
+    vendidosHoy: ordenesHoy.length,
     ingresosDia: ordenesHoy.reduce((a, o) => a + Number(o.total), 0),
     ingresosTotal: ordenesTotal.reduce((a, o) => a + Number(o.total), 0),
     disponiblesPorCategoria: categorias.map((c) => ({ id: c.id, nombre: c.nombre, disponibles: c.disponibles, total: c.totalBoletos })),
@@ -266,7 +273,10 @@ export async function saveConfig(req: Request, res: Response) {
 
 export async function getQREvento(req: Request, res: Response) {
   try {
-    const evento = await prisma.evento.findUnique({ where: { id: req.params.id }, select: { slug: true, nombre: true } });
+    const evento = await prisma.evento.findUnique({
+      where: { id: req.params.id, ...ew(req) },
+      select: { slug: true, nombre: true },
+    });
     if (!evento) return res.status(404).json({ error: 'Evento no encontrado' });
 
     const baseUrl = process.env.NEXTAUTH_URL || 'https://regioticket.iados.online';
@@ -299,10 +309,11 @@ export async function saveMapa(req: Request, res: Response) {
 
 // ──────────────────── USUARIOS ────────────────────
 
-export async function listarUsuarios(_req: Request, res: Response) {
+export async function listarUsuarios(req: Request, res: Response) {
   try {
     const usuarios = await prisma.usuario.findMany({
-      select: { id: true, email: true, nombre: true, rol: true, activo: true, createdAt: true },
+      where: ew(req),
+      select: { id: true, email: true, nombre: true, rol: true, activo: true, createdAt: true, empresaId: true },
       orderBy: { createdAt: 'desc' },
     });
     res.json(usuarios);
@@ -311,12 +322,13 @@ export async function listarUsuarios(_req: Request, res: Response) {
 
 export async function crearUsuario(req: Request, res: Response) {
   try {
-    const { email, password, nombre, rol, activo } = req.body;
+    const { email, password, nombre, rol, activo, empresaId: bodyEmpresaId } = req.body;
     if (!password) return res.status(400).json({ error: 'Password requerido' });
+    const empresaId = req.user!.rol === 'SUPER_ADMIN' ? bodyEmpresaId : req.user!.empresaId;
     const hashed = await bcrypt.hash(password, 10);
     const u = await prisma.usuario.create({
-      data: { email, password: hashed, nombre, rol, activo: activo ?? true },
-      select: { id: true, email: true, nombre: true, rol: true, activo: true },
+      data: { email, password: hashed, nombre, rol, activo: activo ?? true, empresaId },
+      select: { id: true, email: true, nombre: true, rol: true, activo: true, empresaId: true },
     });
     res.status(201).json(u);
   } catch (e: any) {
@@ -327,13 +339,13 @@ export async function crearUsuario(req: Request, res: Response) {
 
 export async function actualizarUsuario(req: Request, res: Response) {
   try {
-    const { password, ...rest } = req.body;
+    const { password, empresaId: _eid, ...rest } = req.body;
     const data: any = { ...rest };
     if (password) data.password = await bcrypt.hash(password, 10);
     const u = await prisma.usuario.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id, ...ew(req) },
       data,
-      select: { id: true, email: true, nombre: true, rol: true, activo: true },
+      select: { id: true, email: true, nombre: true, rol: true, activo: true, empresaId: true },
     });
     res.json(u);
   } catch { res.status(500).json({ error: 'Error actualizando usuario' }); }

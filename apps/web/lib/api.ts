@@ -18,7 +18,6 @@ function authHeaders(token: string) {
   return { Authorization: `Bearer ${token}` };
 }
 
-// ── Eventos ──
 export const api = {
   eventos: {
     list: () => request<any[]>('/eventos'),
@@ -75,14 +74,22 @@ export const api = {
     },
     mapa: {
       get:  (eventoId: string, token: string) => request<any>(`/admin/mapa/${eventoId}`, { headers: authHeaders(token) }),
-      save: (eventoId: string, body: object, token: string) => request<any>(`/admin/mapa/${eventoId}`, { method: 'PUT', body: JSON.stringify(body), headers: authHeaders(token) }),
+      save: (eventoId: string, body: object, token: string) =>
+        request<any>(`/admin/mapa/${eventoId}`, { method: 'PUT', body: JSON.stringify(body), headers: authHeaders(token) }),
     },
     config: {
       get:  (token: string) => request<Record<string, string>>('/admin/config', { headers: authHeaders(token) }),
-      save: (body: Record<string, string>, token: string) => request<any>('/admin/config', { method: 'PUT', body: JSON.stringify(body), headers: authHeaders(token) }),
+      save: (body: Record<string, string>, token: string) =>
+        request<any>('/admin/config', { method: 'PUT', body: JSON.stringify(body), headers: authHeaders(token) }),
+    },
+    configEmpresa: {
+      get:  (token: string) => request<any>('/admin/config-empresa', { headers: authHeaders(token) }),
+      save: (body: object, token: string) =>
+        request<any>('/admin/config-empresa', { method: 'PUT', body: JSON.stringify(body), headers: authHeaders(token) }),
     },
     qr: {
-      get: (eventoId: string, token: string) => request<{ qr: string; url: string; nombre: string }>(`/admin/eventos/${eventoId}/qr`, { headers: authHeaders(token) }),
+      get: (eventoId: string, token: string) =>
+        request<{ qr: string; url: string; nombre: string }>(`/admin/eventos/${eventoId}/qr`, { headers: authHeaders(token) }),
     },
     ordenes: {
       list: (params: Record<string, string>, token: string) => {
@@ -96,6 +103,13 @@ export const api = {
         request<any>('/admin/usuarios', { method: 'POST', body: JSON.stringify(body), headers: authHeaders(token) }),
       update: (id: string, body: object, token: string) =>
         request<any>(`/admin/usuarios/${id}`, { method: 'PUT', body: JSON.stringify(body), headers: authHeaders(token) }),
+    },
+    empresas: {
+      list: (token: string) => request<any[]>('/admin/empresas', { headers: authHeaders(token) }),
+      create: (body: object, token: string) =>
+        request<any>('/admin/empresas', { method: 'POST', body: JSON.stringify(body), headers: authHeaders(token) }),
+      update: (id: string, body: object, token: string) =>
+        request<any>(`/admin/empresas/${id}`, { method: 'PUT', body: JSON.stringify(body), headers: authHeaders(token) }),
     },
   },
 };

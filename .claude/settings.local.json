@@ -33,7 +33,18 @@
       "WebFetch(domain:www.facebook.com)",
       "Bash(copy \"C:\\\\sites\\\\regioticket\\\\programa.jpg\" \"C:\\\\sites\\\\regioticket\\\\apps\\\\web\\\\public\\\\eventos\\\\palacio-vaquero-rodeo.jpg\")",
       "Bash(mkdir -p /c/sites/regioticket/apps/web/public/eventos)",
-      "Bash(cp \"/c/sites/regioticket/programa.jpg\" \"/c/sites/regioticket/apps/web/public/eventos/palacio-vaquero-rodeo.jpg\")"
+      "Bash(cp \"/c/sites/regioticket/programa.jpg\" \"/c/sites/regioticket/apps/web/public/eventos/palacio-vaquero-rodeo.jpg\")",
+      "Bash(cp \"/c/sites/regioticket/logo iados/logo_iados_white_1024.png\" \"/c/sites/regioticket/apps/web/public/logo-white.png\")",
+      "Bash(cp \"/c/sites/regioticket/logo iados/logo_iados_transparent_1024.png\" \"/c/sites/regioticket/apps/web/public/logo.png\")",
+      "Bash(npx tsc *)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(npm install *)",
+      "Bash(node_modules/.bin/tsc --version)",
+      "Bash(../node_modules/.bin/tsc --noEmit)",
+      "Bash(../../node_modules/.bin/tsc --noEmit)",
+      "Bash(../../node_modules/.bin/prisma generate *)",
+      "Bash(../../node_modules/.bin/tsc)",
+      "Bash(node_modules/.bin/prisma generate *)"
     ]
   }
 }

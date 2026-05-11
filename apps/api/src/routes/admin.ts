@@ -9,6 +9,10 @@ import {
   getConfig, saveConfig,
   getQREvento,
 } from '../controllers/adminController';
+import {
+  listarEmpresas, crearEmpresa, actualizarEmpresa,
+  getConfigEmpresa, saveConfigEmpresa,
+} from '../controllers/empresaController';
 import { requireAuth } from '../middleware/auth';
 import { requireRol } from '../middleware/roles';
 import { validate } from '../middleware/validate';
@@ -28,6 +32,7 @@ const eventoSchema = z.object({
   estado: z.enum(['BORRADOR', 'ACTIVO', 'PAUSADO', 'FINALIZADO']).optional(),
   ventaOnline: z.boolean().optional(),
   ventaTaquilla: z.boolean().optional(),
+  empresaId: z.string().optional(),
 });
 
 const categoriaSchema = z.object({
@@ -46,33 +51,50 @@ const usuarioSchema = z.object({
   nombre: z.string().min(2),
   rol: z.enum(['ADMIN', 'CAJERO', 'VALIDADOR']),
   activo: z.boolean().optional(),
+  empresaId: z.string().optional(),
 });
 
+// Eventos
 router.get('/eventos', listarEventosAdmin);
 router.post('/eventos', validate(eventoSchema), crearEvento);
 router.put('/eventos/:id', validate(eventoSchema), actualizarEvento);
 router.delete('/eventos/:id', eliminarEvento);
+router.get('/eventos/:id/qr', getQREvento);
 
+// Categorías
 router.get('/categorias', listarCategorias);
 router.post('/categorias', validate(categoriaSchema), crearCategoria);
 router.put('/categorias/:id', validate(categoriaSchema), actualizarCategoria);
 router.put('/categorias/:id/toggle-online', toggleOnline);
 router.put('/categorias/:id/toggle-taquilla', toggleTaquilla);
 
+// Órdenes
 router.get('/ordenes', listarOrdenes);
 router.get('/ordenes/exportar', exportarOrdenes);
 router.get('/dashboard/:eventoId', dashboardStream);
 
+// Usuarios
 router.get('/usuarios', listarUsuarios);
 router.post('/usuarios', validate(usuarioSchema), crearUsuario);
 router.put('/usuarios/:id', validate(usuarioSchema), actualizarUsuario);
 
+// Mapa
 router.get('/mapa/:eventoId', getMapa);
 router.put('/mapa/:eventoId', saveMapa);
 
+// Config sistema (SUPER_ADMIN)
 router.get('/config', getConfig);
 router.put('/config', saveConfig);
 
-router.get('/eventos/:id/qr', getQREvento);
+// Config empresa
+router.get('/config-empresa', getConfigEmpresa);
+router.put('/config-empresa', saveConfigEmpresa);
+
+// Empresas (SUPER_ADMIN only)
+router.get('/empresas', requireRol('SUPER_ADMIN'), listarEmpresas);
+router.post('/empresas', requireRol('SUPER_ADMIN'), crearEmpresa);
+router.put('/empresas/:id', requireRol('SUPER_ADMIN'), actualizarEmpresa);
+router.get('/empresas/:empresaId/config', requireRol('SUPER_ADMIN'), getConfigEmpresa);
+router.put('/empresas/:empresaId/config', requireRol('SUPER_ADMIN'), saveConfigEmpresa);
 
 export default router;

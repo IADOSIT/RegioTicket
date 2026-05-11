@@ -15,12 +15,21 @@ export async function login(req: Request, res: Response) {
     if (!ok) return res.status(401).json({ error: 'Credenciales inválidas' });
 
     const token = jwt.sign(
-      { sub: usuario.id, email: usuario.email, nombre: usuario.nombre, rol: usuario.rol },
+      {
+        sub: usuario.id,
+        email: usuario.email,
+        nombre: usuario.nombre,
+        rol: usuario.rol,
+        empresaId: usuario.empresaId ?? null,
+      },
       process.env.JWT_SECRET!,
       { expiresIn: '12h' }
     );
-    res.json({ token, usuario: { id: usuario.id, email: usuario.email, nombre: usuario.nombre, rol: usuario.rol } });
-  } catch (err) {
+    res.json({
+      token,
+      usuario: { id: usuario.id, email: usuario.email, nombre: usuario.nombre, rol: usuario.rol, empresaId: usuario.empresaId },
+    });
+  } catch {
     res.status(500).json({ error: 'Error interno' });
   }
 }

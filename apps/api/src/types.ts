@@ -5,6 +5,7 @@ export interface AuthJWT {
   email: string;
   nombre: string;
   rol: Rol;
+  empresaId: string | null;
   iat: number;
   exp: number;
 }
