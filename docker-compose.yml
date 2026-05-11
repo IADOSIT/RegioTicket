@@ -30,9 +30,9 @@ services:
     restart: unless-stopped
     environment:
       - NODE_ENV=production
-      - NEXTAUTH_URL=http://74.208.149.7:8089
+      - NEXTAUTH_URL=https://regioticket.iados.online
       - NEXTAUTH_SECRET=b8745b90b3972fd6d3123fbed527b50e246d57c9b08873ad09b9f44d67ace7a4
-      - NEXT_PUBLIC_API_URL=http://74.208.149.7:8089/api
+      - NEXT_PUBLIC_API_URL=https://regioticket.iados.online/api
       - API_INTERNAL_URL=http://regioticket_api:4000
     networks:
       - web_network
@@ -54,7 +54,7 @@ services:
       - DATABASE_URL=postgresql://administrador:U191tl1ebFN2RJR0fld5QhC8U29AhdOQ@postgres_local:5432/regioticket
       - REDIS_URL=redis://regioticket_redis:6379
       - JWT_SECRET=fffe8a4f50dfc513839f1a12a3fa3aac6ccc0cfaed3dda87232fba76348f9a2e
-      - NEXTAUTH_URL=http://74.208.149.7:8089
+      - NEXTAUTH_URL=https://regioticket.iados.online
       - MP_ACCESS_TOKEN=TEST_ACCESS_TOKEN
       - MP_WEBHOOK_SECRET=TEST_WEBHOOK_SECRET
       - SMTP_HOST=smtp.gmail.com
