@@ -13,8 +13,11 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (status === 'unauthenticated') router.push('/admin/login');
-  }, [status, router]);
+    if (status === 'unauthenticated' && pathname !== '/admin/login') router.push('/admin/login');
+  }, [status, router, pathname]);
+
+  // La página de login no necesita sesión — renderizarla directamente
+  if (pathname === '/admin/login') return <>{children}</>;
 
   if (status === 'loading' || !session) return (
     <div className="flex items-center justify-center h-screen"><div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin" /></div>
