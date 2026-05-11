@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { LockIcon } from 'lucide-react';
 
 export function Header() {
   return (
@@ -10,6 +11,12 @@ export function Header() {
         </Link>
         <nav className="flex items-center gap-4">
           <Link href="/" className="text-sm text-gray-500 hover:text-green-600 transition-colors">Eventos</Link>
+          <Link
+            href="/admin"
+            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-700 transition-colors border border-gray-200 rounded-lg px-3 py-1.5"
+          >
+            <LockIcon size={12} />Admin
+          </Link>
         </nav>
       </div>
     </header>

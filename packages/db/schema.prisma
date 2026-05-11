@@ -54,6 +54,12 @@ enum TipoItem {
   PRODUCTO
 }
 
+enum TipoDistribucion {
+  GENERAL
+  NUMERADO
+  MESA
+}
+
 model Usuario {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -95,10 +101,12 @@ model Categoria {
   precio         Decimal   @db.Decimal(10, 2)
   totalBoletos   Int
   disponibles    Int
-  activaOnline   Boolean   @default(true)
-  activaTaquilla Boolean   @default(true)
-  ordenDisplay   Int       @default(0)
-  items          ItemOrden[]
+  activaOnline      Boolean          @default(true)
+  activaTaquilla    Boolean          @default(true)
+  ordenDisplay      Int              @default(0)
+  tipoDistribucion  TipoDistribucion @default(GENERAL)
+  capacidadMesa     Int?
+  items             ItemOrden[]
   boletos        Boleto[]
   createdAt      DateTime  @default(now())
 
