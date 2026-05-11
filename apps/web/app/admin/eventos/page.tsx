@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { formatFechaCorta } from '@/lib/utils';
-import { PlusIcon, PencilIcon, TrashIcon, FolderIcon } from 'lucide-react';
+import { PlusIcon, PencilIcon, TrashIcon, FolderIcon, MapIcon, QrCodeIcon, DownloadIcon, XIcon } from 'lucide-react';
 
 export default function EventosAdminPage() {
   const { data: session } = useSession();
@@ -18,6 +18,8 @@ export default function EventosAdminPage() {
   const [modal, setModal] = useState(false);
   const [editando, setEditando] = useState<any>(null);
   const [form, setForm] = useState({ nombre: '', lugar: '', fechaEvento: '', descripcion: '', estado: 'BORRADOR', ventaOnline: true, ventaTaquilla: true });
+  const [qrModal, setQrModal] = useState<{ qr: string; url: string; nombre: string } | null>(null);
+  const [qrLoading, setQrLoading] = useState<string | null>(null);
   const token = (session?.user as any)?.apiToken;
 
   const cargar = async () => { const ev = await api.admin.eventos.list(token); setEventos(ev); };
@@ -43,6 +45,22 @@ export default function EventosAdminPage() {
     cargar();
   }
 
+  async function verQR(ev: any) {
+    setQrLoading(ev.id);
+    try {
+      const data = await api.admin.qr.get(ev.id, token);
+      setQrModal(data);
+    } catch { alert('Error generando QR'); }
+    finally { setQrLoading(null); }
+  }
+
+  function descargarQR(qr: string, nombre: string) {
+    const a = document.createElement('a');
+    a.href = qr;
+    a.download = `qr-${nombre.toLowerCase().replace(/\s+/g, '-')}.png`;
+    a.click();
+  }
+
   const estadoBadge = (e: string) => e === 'ACTIVO' ? 'default' : e === 'PAUSADO' ? 'warning' : 'secondary';
 
   return (
@@ -64,13 +82,19 @@ export default function EventosAdminPage() {
                 <p className="text-sm text-gray-500 truncate">{ev.lugar} · {formatFechaCorta(ev.fechaEvento)}</p>
                 <p className="text-xs text-gray-400 mt-0.5">{ev.categorias?.length ?? 0} categorías · {ev._count?.ordenes ?? 0} órdenes</p>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                 <Link href={`/admin/eventos/${ev.id}/categorias`}>
                   <Button variant="outline" size="sm"><FolderIcon size={14} className="mr-1" />Cats.</Button>
                 </Link>
                 <Link href={`/admin/eventos/${ev.id}/ordenes`}>
                   <Button variant="outline" size="sm">Órdenes</Button>
                 </Link>
+                <Link href={`/admin/eventos/${ev.id}/mapa`}>
+                  <Button variant="outline" size="sm"><MapIcon size={14} className="mr-1" />Mapa</Button>
+                </Link>
+                <Button variant="outline" size="sm" onClick={() => verQR(ev)} disabled={qrLoading === ev.id}>
+                  <QrCodeIcon size={14} className="mr-1" />{qrLoading === ev.id ? '…' : 'QR'}
+                </Button>
                 <Button variant="outline" size="icon" onClick={() => abrirModal(ev)}><PencilIcon size={14} /></Button>
                 <Button variant="destructive" size="icon" onClick={() => eliminar(ev.id)}><TrashIcon size={14} /></Button>
               </div>
@@ -79,6 +103,7 @@ export default function EventosAdminPage() {
         ))}
       </div>
 
+      {/* Modal crear/editar evento */}
       {modal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md space-y-4">
@@ -107,6 +132,29 @@ export default function EventosAdminPage() {
             <div className="flex gap-3 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => setModal(false)}>Cancelar</Button>
               <Button className="flex-1" onClick={guardar}>Guardar</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal QR */}
+      {qrModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4 text-center">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900">QR del evento</h2>
+              <button onClick={() => setQrModal(null)} className="text-gray-400 hover:text-gray-600"><XIcon size={20} /></button>
+            </div>
+            <p className="text-sm text-gray-500 font-medium">{qrModal.nombre}</p>
+            <div className="flex justify-center">
+              <img src={qrModal.qr} alt="QR" className="w-56 h-56 rounded-xl border border-gray-200" />
+            </div>
+            <p className="text-xs text-gray-400 break-all">{qrModal.url}</p>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setQrModal(null)}>Cerrar</Button>
+              <Button className="flex-1" onClick={() => descargarQR(qrModal.qr, qrModal.nombre)}>
+                <DownloadIcon size={14} className="mr-1.5" />Descargar PNG
+              </Button>
             </div>
           </div>
         </div>

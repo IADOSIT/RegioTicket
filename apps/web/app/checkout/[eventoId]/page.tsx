@@ -23,7 +23,7 @@ export default function CheckoutPage() {
   const [evento, setEvento] = useState<any>(null);
   const [eventoError, setEventoError] = useState(false);
   const [seleccion, setSeleccion] = useState<{ categoriaId: string; cantidad: number }[]>([]);
-  const [comprador, setComprador] = useState({ nombre: '', email: '', tel: '' });
+  const [comprador, setComprador] = useState({ nombre: '', email: '', tel: '', whatsapp: '' });
   const [timer, setTimer] = useState(TIMER_SEGUNDOS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -82,6 +82,7 @@ export default function CheckoutPage() {
         compradorNombre: comprador.nombre,
         compradorEmail: comprador.email,
         compradorTel: comprador.tel,
+        compradorWhatsapp: comprador.whatsapp,
       });
       window.location.href = init_point;
     } catch (e: any) {
@@ -179,12 +180,17 @@ export default function CheckoutPage() {
               <p className="text-xs text-gray-400">Te enviaremos tu boleto aquí</p>
             </div>
             <div className="space-y-1">
+              <Label htmlFor="whatsapp">WhatsApp <span className="text-red-500">*</span></Label>
+              <Input id="whatsapp" type="tel" placeholder="+52 81 1234 5678" value={comprador.whatsapp} onChange={(e) => setComprador((p) => ({ ...p, whatsapp: e.target.value }))} />
+              <p className="text-xs text-gray-400">Te enviaremos tu boleto digital por WhatsApp</p>
+            </div>
+            <div className="space-y-1">
               <Label htmlFor="tel">Teléfono (opcional)</Label>
               <Input id="tel" type="tel" placeholder="+52 81 1234 5678" value={comprador.tel} onChange={(e) => setComprador((p) => ({ ...p, tel: e.target.value }))} />
             </div>
             <div className="flex gap-3 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>Regresar</Button>
-              <Button className="flex-1" onClick={() => setStep(3)} disabled={!comprador.email}>Continuar</Button>
+              <Button className="flex-1" onClick={() => setStep(3)} disabled={!comprador.email || !comprador.whatsapp}>Continuar</Button>
             </div>
           </div>
         )}

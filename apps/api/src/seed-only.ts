@@ -91,6 +91,22 @@ async function main() {
   }
 }
 
+  // ── Config Sistema
+  const configDefaults: Record<string, string> = {
+    contacto_telefono_1: '+52 81 0000 0000',
+    contacto_telefono_2: '',
+    contacto_telefono_3: '',
+    contacto_whatsapp:   '528100000000',
+    contacto_email:      'contacto@regioticket.mx',
+    empresa_nombre:      'RegioTicket',
+    empresa_ciudad:      'Apodaca, Nuevo León',
+  };
+  for (const [clave, valor] of Object.entries(configDefaults)) {
+    await prisma.configSistema.upsert({ where: { clave }, update: {}, create: { clave, valor } });
+  }
+  console.log('✅ ConfigSistema: defaults seeded');
+}
+
 main()
   .catch((e) => { console.error('❌ Seed falló:', e); process.exit(1); })
   .finally(() => prisma.$disconnect());

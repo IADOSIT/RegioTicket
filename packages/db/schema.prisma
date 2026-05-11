@@ -134,9 +134,10 @@ model Orden {
   canal           CanalVenta
   formaPago       FormaPago
   estado          EstadoOrden @default(PENDIENTE)
-  compradorNombre String?
-  compradorEmail  String?
-  compradorTel    String?
+  compradorNombre    String?
+  compradorEmail     String?
+  compradorTel       String?
+  compradorWhatsapp  String?
   total           Decimal     @db.Decimal(10, 2)
   mpPaymentId     String?
   mpPreferenciaId String?
@@ -179,6 +180,12 @@ model Boleto {
   createdAt   DateTime     @default(now())
 
   @@index([estado])
+}
+
+model ConfigSistema {
+  id    String @id @default(cuid())
+  clave String @unique
+  valor String
 }
 
 model MapaVenue {

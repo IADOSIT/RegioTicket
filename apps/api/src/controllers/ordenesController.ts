@@ -5,7 +5,7 @@ import { reservarStock, inicializarStock } from '../services/redis';
 import { crearPreferencia } from '../services/mercadopago';
 
 export async function crearOrden(req: Request, res: Response) {
-  const { eventoId, items, compradorNombre, compradorEmail, compradorTel } = req.body;
+  const { eventoId, items, compradorNombre, compradorEmail, compradorTel, compradorWhatsapp } = req.body;
 
   try {
     // Cargar categorías
@@ -52,6 +52,7 @@ export async function crearOrden(req: Request, res: Response) {
         compradorNombre,
         compradorEmail,
         compradorTel,
+        compradorWhatsapp,
         total: totalNum,
         expiresAt,
         items: {

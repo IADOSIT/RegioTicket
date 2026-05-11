@@ -36,6 +36,16 @@ app.use('/api/webhook', webhookRouter);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, ts: new Date() }));
 
+// Config pública (sin auth) — solo datos de contacto para el footer
+app.get('/api/config/public', async (_req, res) => {
+  try {
+    const { prisma } = await import('./utils/helpers');
+    const rows = await prisma.configSistema.findMany();
+    const cfg = Object.fromEntries(rows.map((r: any) => [r.clave, r.valor]));
+    res.json(cfg);
+  } catch { res.json({}); }
+});
+
 app.listen(PORT, () => {
   console.log(`API RegioTicket escuchando en :${PORT}`);
   startExpirarOrdenes();

@@ -237,6 +237,45 @@ async function calcularMetricas(eventoId: string) {
   };
 }
 
+// ──────────────────── CONFIGURACIÓN SISTEMA ────────────────────
+
+export async function getConfig(_req: Request, res: Response) {
+  try {
+    const rows = await prisma.configSistema.findMany();
+    const config = Object.fromEntries(rows.map((r) => [r.clave, r.valor]));
+    res.json(config);
+  } catch { res.status(500).json({ error: 'Error obteniendo configuración' }); }
+}
+
+export async function saveConfig(req: Request, res: Response) {
+  try {
+    const entries = Object.entries(req.body as Record<string, string>);
+    await Promise.all(entries.map(([clave, valor]) =>
+      prisma.configSistema.upsert({
+        where: { clave },
+        update: { valor: String(valor) },
+        create: { clave, valor: String(valor) },
+      })
+    ));
+    res.json({ ok: true });
+  } catch { res.status(500).json({ error: 'Error guardando configuración' }); }
+}
+
+// ──────────────────── QR EVENTO ────────────────────
+
+export async function getQREvento(req: Request, res: Response) {
+  try {
+    const evento = await prisma.evento.findUnique({ where: { id: req.params.id }, select: { slug: true, nombre: true } });
+    if (!evento) return res.status(404).json({ error: 'Evento no encontrado' });
+
+    const QRCode = await import('qrcode');
+    const baseUrl = process.env.NEXTAUTH_URL || 'https://regioticket.iados.online';
+    const url = `${baseUrl}/eventos/${evento.slug}`;
+    const qrDataUrl = await QRCode.default.toDataURL(url, { width: 400, margin: 2, color: { dark: '#0f172a', light: '#ffffff' } });
+    res.json({ qr: qrDataUrl, url, nombre: evento.nombre });
+  } catch { res.status(500).json({ error: 'Error generando QR' }); }
+}
+
 // ──────────────────── MAPA VENUE ────────────────────
 
 export async function getMapa(req: Request, res: Response) {

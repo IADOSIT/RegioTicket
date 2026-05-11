@@ -6,6 +6,8 @@ import {
   listarOrdenes, exportarOrdenes, dashboardStream,
   listarUsuarios, crearUsuario, actualizarUsuario,
   getMapa, saveMapa,
+  getConfig, saveConfig,
+  getQREvento,
 } from '../controllers/adminController';
 import { requireAuth } from '../middleware/auth';
 import { requireRol } from '../middleware/roles';
@@ -67,5 +69,10 @@ router.put('/usuarios/:id', validate(usuarioSchema), actualizarUsuario);
 
 router.get('/mapa/:eventoId', getMapa);
 router.put('/mapa/:eventoId', saveMapa);
+
+router.get('/config', getConfig);
+router.put('/config', saveConfig);
+
+router.get('/eventos/:id/qr', getQREvento);
 
 export default router;
