@@ -36,6 +36,7 @@ const eventoSchema = z.object({
   estado: z.enum(['BORRADOR', 'ACTIVO', 'PAUSADO', 'FINALIZADO']).optional(),
   ventaOnline: z.boolean().optional(),
   ventaTaquilla: z.boolean().optional(),
+  aforoTotal: z.number().int().nonnegative().optional(),
   empresaId: z.string().optional(),
 });
 

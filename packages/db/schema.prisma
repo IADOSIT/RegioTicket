@@ -116,6 +116,15 @@ model ConfigEmpresa {
   stripeSecretKey     String?
   stripeWebhookSecret String?
 
+  // OXXO (requiere Stripe configurado)
+  oxxoActivo          Boolean  @default(false)
+
+  // SPEI / transferencia bancaria (manual)
+  speiActivo          Boolean  @default(false)
+  speiClabe           String?
+  speiNombreBanco     String?
+  speiBeneficiario    String?
+
   updatedAt           DateTime @updatedAt
 }
 

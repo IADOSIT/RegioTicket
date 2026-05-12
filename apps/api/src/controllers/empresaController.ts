@@ -75,6 +75,10 @@ export async function saveConfigEmpresa(req: Request, res: Response) {
       facebook, instagram, tiktok, emailContacto, telefonoContacto,
       // Stripe
       stripePublicKey, stripeSecretKey, stripeWebhookSecret,
+      // OXXO
+      oxxoActivo,
+      // SPEI
+      speiActivo, speiClabe, speiNombreBanco, speiBeneficiario,
     } = req.body;
 
     const data: any = {
@@ -86,6 +90,11 @@ export async function saveConfigEmpresa(req: Request, res: Response) {
       colorPrimario, descripcionCorta, heroTexto, bannerUrl,
       facebook, instagram, tiktok, emailContacto, telefonoContacto,
       stripePublicKey,
+      oxxoActivo: oxxoActivo === true || oxxoActivo === 'true',
+      speiActivo: speiActivo === true || speiActivo === 'true',
+      speiClabe: speiClabe || null,
+      speiNombreBanco: speiNombreBanco || null,
+      speiBeneficiario: speiBeneficiario || null,
     };
     // No sobreescribir con placeholder
     if (smtpPass && smtpPass !== '••••••••') data.smtpPass = smtpPass;

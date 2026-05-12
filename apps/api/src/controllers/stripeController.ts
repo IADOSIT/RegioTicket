@@ -103,6 +103,71 @@ export async function crearStripeIntent(req: Request, res: Response) {
   }
 }
 
+export async function crearOxxoIntent(req: Request, res: Response) {
+  try {
+    const { eventoId, items, compradorNombre, compradorEmail, compradorTel, compradorWhatsapp } = req.body;
+    if (!eventoId || !items?.length || !compradorEmail) {
+      return res.status(400).json({ error: 'Datos incompletos. Email requerido para OXXO.' });
+    }
+
+    const evento = await prisma.evento.findUnique({
+      where: { id: eventoId },
+      include: { empresa: { include: { config: true } } },
+    });
+    if (!evento) return res.status(404).json({ error: 'Evento no encontrado' });
+
+    const cfg = evento.empresa?.config;
+    if (!cfg?.stripeSecretKey || !cfg?.oxxoActivo) {
+      return res.status(400).json({ error: 'OXXO no disponible para este evento' });
+    }
+
+    const categorias = await prisma.categoria.findMany({ where: { id: { in: items.map((i: any) => i.categoriaId) } } });
+    const total = items.reduce((acc: number, i: any) => {
+      const cat = categorias.find((c) => c.id === i.categoriaId);
+      return acc + (cat ? Number(cat.precio) * i.cantidad : 0);
+    }, 0);
+    if (total <= 0) return res.status(400).json({ error: 'Total inválido' });
+
+    const orden = await prisma.orden.create({
+      data: {
+        eventoId,
+        empresaId: evento.empresaId ?? undefined,
+        canal: 'ONLINE',
+        formaPago: 'OXXO',
+        estado: 'PENDIENTE',
+        compradorNombre: compradorNombre || null,
+        compradorEmail: compradorEmail.toLowerCase().trim(),
+        compradorTel: compradorTel || null,
+        compradorWhatsapp: compradorWhatsapp || null,
+        total,
+        expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000), // 72h para pagar en OXXO
+        items: {
+          create: items.map((i: any) => {
+            const cat = categorias.find((c) => c.id === i.categoriaId);
+            const precio = Number(cat?.precio ?? 0);
+            return { tipoItem: 'BOLETO', categoriaId: i.categoriaId, cantidad: i.cantidad, precioUnitario: precio, subtotal: precio * i.cantidad };
+          }),
+        },
+      },
+    });
+
+    const stripe = makeStripe(cfg.stripeSecretKey);
+    const intent = await stripe.paymentIntents.create({
+      amount: Math.round(total * 100),
+      currency: 'mxn',
+      payment_method_types: ['oxxo'],
+      metadata: { ordenId: orden.id, empresaId: evento.empresaId ?? '' },
+      description: `${evento.nombre} — RegioTicket`,
+    });
+
+    await prisma.orden.update({ where: { id: orden.id }, data: { referenciaPago: intent.id } });
+    res.json({ clientSecret: intent.client_secret, publicKey: cfg.stripePublicKey, ordenId: orden.id });
+  } catch (e: any) {
+    console.error('[oxxo/intent]', e.message);
+    res.status(500).json({ error: 'Error creando pago OXXO' });
+  }
+}
+
 export async function stripeWebhook(req: Request, res: Response) {
   const sig = req.headers['stripe-signature'] as string;
   const rawBody = req.body as Buffer;

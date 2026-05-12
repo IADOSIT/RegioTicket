@@ -33,6 +33,8 @@ function ConfigEmpresaForm() {
     bannerUrl: '', facebook: '', instagram: '', tiktok: '',
     emailContacto: '', telefonoContacto: '',
     stripePublicKey: '', stripeSecretKey: '', stripeWebhookSecret: '',
+    oxxoActivo: false,
+    speiActivo: false, speiClabe: '', speiNombreBanco: '', speiBeneficiario: '',
   });
   const [slug, setSlug] = useState('');
   const [guardado, setGuardado] = useState(false);
@@ -207,6 +209,33 @@ function ConfigEmpresaForm() {
         <Field label="Publishable Key" id="stripePublicKey" placeholder="pk_live_..." value={form.stripePublicKey} onChange={(v: string) => set('stripePublicKey', v)} />
         <Field label="Secret Key" id="stripeSecretKey" type="password" placeholder="sk_live_..." value={form.stripeSecretKey} onChange={(v: string) => set('stripeSecretKey', v)} hint="Se guarda cifrado, no se muestra en texto plano" />
         <Field label="Webhook Secret" id="stripeWebhookSecret" type="password" placeholder="whsec_..." value={form.stripeWebhookSecret} onChange={(v: string) => set('stripeWebhookSecret', v)} />
+        <div className="pt-2 border-t border-gray-100">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" checked={!!form.oxxoActivo} onChange={(e) => set('oxxoActivo', e.target.checked)} className="w-4 h-4 accent-green-600" />
+            <div>
+              <p className="text-sm font-medium text-gray-800">Habilitar pago OXXO</p>
+              <p className="text-xs text-gray-400">Requiere Stripe configurado. El comprador recibe un voucher para pagar en tienda OXXO.</p>
+            </div>
+          </label>
+        </div>
+      </Section>
+
+      {/* SPEI */}
+      <Section title="Transferencia bancaria (SPEI)" icon={CreditCardIcon}>
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" checked={!!form.speiActivo} onChange={(e) => set('speiActivo', e.target.checked)} className="w-4 h-4 accent-green-600" />
+          <div>
+            <p className="text-sm font-medium text-gray-800">Habilitar pago por SPEI</p>
+            <p className="text-xs text-gray-400">El comprador transfiere y el admin confirma el pago manualmente.</p>
+          </div>
+        </label>
+        {form.speiActivo && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+            <Field label="CLABE interbancaria (18 dígitos)" id="speiClabe" placeholder="012345678901234567" value={form.speiClabe} onChange={(v: string) => set('speiClabe', v)} />
+            <Field label="Nombre del banco" id="speiNombreBanco" placeholder="BBVA, Santander..." value={form.speiNombreBanco} onChange={(v: string) => set('speiNombreBanco', v)} />
+            <Field label="Nombre del beneficiario" id="speiBeneficiario" placeholder="Razón social o nombre" value={form.speiBeneficiario} onChange={(v: string) => set('speiBeneficiario', v)} hint="Nombre que aparece en el comprobante" />
+          </div>
+        )}
       </Section>
 
       {/* Ventana de validación */}

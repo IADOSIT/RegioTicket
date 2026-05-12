@@ -26,12 +26,16 @@ export const api = {
 
   ordenes: {
     crear: (body: object) => request<any>('/ordenes', { method: 'POST', body: JSON.stringify(body) }),
+    crearSpei: (body: object) => request<any>('/ordenes/spei', { method: 'POST', body: JSON.stringify(body) }),
     validarPromo: (body: object) => request<any>('/ordenes/validar-promo', { method: 'POST', body: JSON.stringify(body) }),
   },
 
   stripe: {
     intent: (body: object) => request<{ clientSecret: string; ordenId: string; publicKey: string }>(
       '/stripe/intent', { method: 'POST', body: JSON.stringify(body) }
+    ),
+    oxxoIntent: (body: object) => request<{ clientSecret: string; ordenId: string; publicKey: string }>(
+      '/stripe/oxxo-intent', { method: 'POST', body: JSON.stringify(body) }
     ),
     validarPromo: (body: object) => request<any>('/stripe/validar-promo', { method: 'POST', body: JSON.stringify(body) }),
   },
@@ -107,6 +111,17 @@ export const api = {
       },
       reembolsar: (id: string, token: string) =>
         request<any>(`/admin/ordenes/${id}/reembolsar`, { method: 'PUT', headers: authHeaders(token) }),
+      exportarCSV: async (eventoId: string, token: string) => {
+        const res = await fetch(`${API_BASE}/admin/ordenes/exportar?eventoId=${eventoId}`, { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) throw new Error('Error exportando CSV');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ordenes-${eventoId}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
     },
     dashboard: {
       global: (token: string) => request<any>('/admin/dashboard-global', { headers: authHeaders(token) }),

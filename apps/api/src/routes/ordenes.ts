@@ -1,6 +1,6 @@
 // Rutas de órdenes online
 import { Router } from 'express';
-import { crearOrden } from '../controllers/ordenesController';
+import { crearOrden, crearOrdenSpei } from '../controllers/ordenesController';
 import { validarCodigo } from '../controllers/promoController';
 import { validate } from '../middleware/validate';
 import { ordenLimiter, publicLimiter } from '../middleware/rateLimit';
@@ -18,6 +18,7 @@ const crearOrdenSchema = z.object({
 });
 
 router.post('/', ordenLimiter, validate(crearOrdenSchema), crearOrden);
+router.post('/spei', ordenLimiter, validate(crearOrdenSchema), crearOrdenSpei);
 router.post('/validar-promo', publicLimiter, validarCodigo);
 
 export default router;

@@ -91,3 +91,61 @@ export async function crearOrden(req: Request, res: Response) {
     res.status(500).json({ error: 'Error creando orden' });
   }
 }
+
+export async function crearOrdenSpei(req: Request, res: Response) {
+  const { eventoId, items, compradorNombre, compradorEmail, compradorTel, compradorWhatsapp } = req.body;
+  try {
+    const categoriaIds = items.map((i: any) => i.categoriaId);
+    const [categorias, evento] = await Promise.all([
+      prisma.categoria.findMany({ where: { id: { in: categoriaIds }, eventoId } }),
+      prisma.evento.findUnique({ where: { id: eventoId }, include: { empresa: { include: { config: true } } } }),
+    ]);
+    if (!evento || evento.estado !== 'ACTIVO' || !evento.ventaOnline) {
+      return res.status(400).json({ error: 'Evento no disponible' });
+    }
+    const cfg = evento.empresa?.config;
+    if (!cfg?.speiActivo || !cfg?.speiClabe) {
+      return res.status(400).json({ error: 'SPEI no configurado para este evento' });
+    }
+
+    const total = items.reduce((acc: number, i: any) => {
+      const cat = categorias.find((c) => c.id === i.categoriaId);
+      return acc + (cat ? Number(cat.precio) * i.cantidad : 0);
+    }, 0);
+
+    const orden = await prisma.orden.create({
+      data: {
+        eventoId,
+        empresaId: evento.empresaId,
+        canal: 'ONLINE',
+        formaPago: 'SPEI',
+        estado: 'PENDIENTE',
+        compradorNombre: compradorNombre || null,
+        compradorEmail: compradorEmail?.toLowerCase().trim() || null,
+        compradorTel: compradorTel || null,
+        compradorWhatsapp: compradorWhatsapp || null,
+        total,
+        expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000), // 48h para transferir
+        items: {
+          create: items.map((i: any) => {
+            const cat = categorias.find((c) => c.id === i.categoriaId)!;
+            const precio = Number(cat.precio);
+            return { tipoItem: 'BOLETO', categoriaId: i.categoriaId, cantidad: i.cantidad, precioUnitario: precio, subtotal: precio * i.cantidad };
+          }),
+        },
+      },
+    });
+
+    res.status(201).json({
+      ordenId: orden.id,
+      clabe: cfg.speiClabe,
+      banco: cfg.speiNombreBanco ?? '',
+      beneficiario: cfg.speiBeneficiario ?? '',
+      monto: total,
+      referencia: orden.id.slice(-8).toUpperCase(),
+    });
+  } catch (err) {
+    console.error('[spei]', err);
+    res.status(500).json({ error: 'Error creando orden SPEI' });
+  }
+}

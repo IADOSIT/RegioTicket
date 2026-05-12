@@ -53,9 +53,9 @@ export default function OrdenesPage() {
             <option value="ONLINE">ONLINE</option>
             <option value="TAQUILLA">TAQUILLA</option>
           </select>
-          <a href={`/api/admin/ordenes/exportar?eventoId=${eventoId}`} target="_blank">
-            <Button variant="outline" size="sm"><DownloadIcon size={14} className="mr-1" />CSV</Button>
-          </a>
+          <Button variant="outline" size="sm" onClick={() => api.admin.ordenes.exportarCSV(eventoId as string, token).catch(() => alert('Error exportando'))}>
+            <DownloadIcon size={14} className="mr-1" />CSV
+          </Button>
         </div>
       </div>
 

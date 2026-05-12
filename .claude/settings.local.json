@@ -73,7 +73,11 @@
       "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"sleep 5 && docker logs regioticket_api --tail 8 2>&1\")",
       "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"cd /home/administrador/apps/regioticket && docker compose build regioticket_web regioticket_nginx 2>&1 | tail -15 && docker compose up -d 2>&1\")",
       "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"sleep 3 && cd /home/administrador/apps/regioticket && docker compose up -d 2>&1\")",
-      "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"sleep 8 && docker logs regioticket_web --tail 5 2>&1 && docker logs regioticket_api --tail 5 2>&1\")"
+      "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"sleep 8 && docker logs regioticket_web --tail 5 2>&1 && docker logs regioticket_api --tail 5 2>&1\")",
+      "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"cd /home/administrador/apps/regioticket && git pull origin master 2>&1 | tail -5 && docker compose build 2>&1 | tail -10 && docker compose up -d 2>&1\")",
+      "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"cd /home/administrador/apps/regioticket && docker compose build regioticket_api 2>&1 | grep -E 'error TS|Error|error:' | head -20\")",
+      "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"cd /home/administrador/apps/regioticket && git pull origin master 2>&1 | tail -3 && docker compose build regioticket_api regioticket_web 2>&1 | grep -E 'error|DONE|Built|failed' | tail -15 && docker compose up -d 2>&1 | tail -10\")",
+      "PowerShell(node C:\\\\tmp\\\\sshtool\\\\run.mjs \"cd /home/administrador/apps/regioticket && git pull origin master 2>&1 | tail -3 && docker compose build regioticket_api 2>&1 | grep -E 'error TS|Built|failed|DONE' | tail -10 && docker compose up -d regioticket_api 2>&1\")"
     ]
   }
 }

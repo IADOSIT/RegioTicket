@@ -64,7 +64,9 @@ export default function CheckoutPage() {
   const [eventoError, setEventoError] = useState(false);
   const [seleccion, setSeleccion] = useState<{ categoriaId: string; cantidad: number }[]>([]);
   const [comprador, setComprador] = useState({ nombre: '', email: '', tel: '', whatsapp: '' });
-  const [metodoPago, setMetodoPago] = useState<'mercadopago' | 'stripe'>('mercadopago');
+  const [metodoPago, setMetodoPago] = useState<'mercadopago' | 'stripe' | 'oxxo' | 'spei'>('mercadopago');
+  const [oxxoResult, setOxxoResult] = useState<{ numero: string; expira: string } | null>(null);
+  const [speiResult, setSpeiResult] = useState<{ clabe: string; banco: string; beneficiario: string; monto: number; referencia: string } | null>(null);
   const [timer, setTimer] = useState(TIMER_SEGUNDOS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -144,6 +146,22 @@ export default function CheckoutPage() {
       if (metodoPago === 'stripe') {
         const { clientSecret, publicKey } = await api.stripe.intent(base);
         setStripeState({ clientSecret, stripePromise: loadStripe(publicKey) });
+      } else if (metodoPago === 'oxxo') {
+        const { clientSecret, publicKey } = await api.stripe.oxxoIntent(base);
+        const stripe = await loadStripe(publicKey);
+        if (!stripe) throw new Error('No se pudo cargar Stripe');
+        const { paymentIntent, error: stripeErr } = await stripe.confirmOxxoPayment(clientSecret, {
+          payment_method: { billing_details: { name: comprador.nombre || 'Cliente', email: comprador.email } },
+        });
+        if (stripeErr) throw new Error(stripeErr.message);
+        const oxxo = (paymentIntent as any)?.next_action?.oxxo_display_details;
+        setOxxoResult({
+          numero: oxxo?.number ?? '—',
+          expira: oxxo?.expires_after ? new Date(oxxo.expires_after * 1000).toLocaleDateString('es-MX') : '—',
+        });
+      } else if (metodoPago === 'spei') {
+        const r = await api.ordenes.crearSpei(base);
+        setSpeiResult(r);
       } else {
         const { init_point } = await api.ordenes.crear(base);
         window.location.href = init_point;
@@ -156,7 +174,9 @@ export default function CheckoutPage() {
   }
 
   const tieneStripe = !!evento?.stripePublicKey;
-  const tieneMP = true; // MercadoPago siempre disponible como fallback del sistema
+  const tieneOxxo = !!evento?.oxxoActivo;
+  const tieneSpei = !!evento?.speiActivo;
+  const tieneMP = true;
   const minutos = String(Math.floor(timer / 60)).padStart(2, '0');
   const segundos = String(timer % 60).padStart(2, '0');
 
@@ -165,6 +185,68 @@ export default function CheckoutPage() {
   );
   if (!evento) return (
     <><Header /><div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin" /></div></>
+  );
+
+  // Pantalla OXXO
+  if (oxxoResult) return (
+    <>
+      <Header />
+      <main className="max-w-lg mx-auto px-4 py-16 text-center">
+        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <span className="text-3xl font-black text-red-600">O</span>
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">¡Voucher OXXO generado!</h1>
+        <p className="text-gray-500 mb-6">Paga en cualquier tienda OXXO antes de que expire el voucher.</p>
+        <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 mb-6 text-left space-y-3">
+          <div>
+            <p className="text-xs text-gray-400 uppercase tracking-wide">Número de referencia</p>
+            <p className="text-2xl font-mono font-bold text-gray-900 tracking-widest mt-1">{oxxoResult.numero}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-400 uppercase tracking-wide">Expira el</p>
+            <p className="font-semibold text-gray-700">{oxxoResult.expira}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-400 uppercase tracking-wide">Monto a pagar</p>
+            <p className="font-bold text-green-600 text-xl">{formatMXN(getTotal())}</p>
+          </div>
+        </div>
+        <p className="text-sm text-gray-400 mb-6">Recibirás tus boletos por email después de confirmar el pago.</p>
+        <Button onClick={() => router.push('/')}>Ir al inicio</Button>
+      </main>
+      <Footer />
+    </>
+  );
+
+  // Pantalla SPEI
+  if (speiResult) return (
+    <>
+      <Header />
+      <main className="max-w-lg mx-auto px-4 py-16 text-center">
+        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <span className="text-2xl font-black text-blue-600">$</span>
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Realiza tu transferencia SPEI</h1>
+        <p className="text-gray-500 mb-6">Transfiere desde tu app bancaria con los siguientes datos.</p>
+        <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 mb-6 text-left space-y-4">
+          {[
+            { label: 'CLABE interbancaria', value: speiResult.clabe, mono: true },
+            { label: 'Banco', value: speiResult.banco },
+            { label: 'Beneficiario', value: speiResult.beneficiario },
+            { label: 'Monto', value: formatMXN(speiResult.monto) },
+            { label: 'Concepto / Referencia', value: speiResult.referencia, mono: true },
+          ].map(({ label, value, mono }) => (
+            <div key={label}>
+              <p className="text-xs text-gray-400 uppercase tracking-wide">{label}</p>
+              <p className={`font-semibold text-gray-900 mt-0.5 ${mono ? 'font-mono tracking-widest' : ''}`}>{value}</p>
+            </div>
+          ))}
+        </div>
+        <p className="text-sm text-gray-400 mb-6">Una vez confirmada la transferencia, recibirás tus boletos por email. Este proceso puede tardar hasta 24 horas.</p>
+        <Button onClick={() => router.push('/')}>Ir al inicio</Button>
+      </main>
+      <Footer />
+    </>
   );
 
   // Pago exitoso con Stripe
@@ -310,26 +392,36 @@ export default function CheckoutPage() {
             )}
 
             {/* Selector de método de pago */}
-            {tieneStripe && tieneMP && !stripeState && (
+            {!stripeState && (
               <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-700">Método de pago</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => setMetodoPago('stripe')}
-                    className={`p-3 rounded-xl border-2 flex flex-col items-center gap-1.5 transition-colors ${metodoPago === 'stripe' ? 'border-green-600 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}
-                  >
-                    <CreditCardIcon size={20} className={metodoPago === 'stripe' ? 'text-green-600' : 'text-gray-400'} />
-                    <span className={`text-xs font-semibold ${metodoPago === 'stripe' ? 'text-green-700' : 'text-gray-500'}`}>Tarjeta</span>
-                    <span className="text-[10px] text-gray-400">Crédito / débito</span>
-                  </button>
-                  <button
-                    onClick={() => setMetodoPago('mercadopago')}
-                    className={`p-3 rounded-xl border-2 flex flex-col items-center gap-1.5 transition-colors ${metodoPago === 'mercadopago' ? 'border-green-600 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}
-                  >
+                  <button onClick={() => setMetodoPago('mercadopago')} className={`p-3 rounded-xl border-2 flex flex-col items-center gap-1.5 transition-colors ${metodoPago === 'mercadopago' ? 'border-green-600 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}>
                     <SmartphoneIcon size={20} className={metodoPago === 'mercadopago' ? 'text-green-600' : 'text-gray-400'} />
                     <span className={`text-xs font-semibold ${metodoPago === 'mercadopago' ? 'text-green-700' : 'text-gray-500'}`}>MercadoPago</span>
                     <span className="text-[10px] text-gray-400">App / transferencia</span>
                   </button>
+                  {tieneStripe && (
+                    <button onClick={() => setMetodoPago('stripe')} className={`p-3 rounded-xl border-2 flex flex-col items-center gap-1.5 transition-colors ${metodoPago === 'stripe' ? 'border-green-600 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                      <CreditCardIcon size={20} className={metodoPago === 'stripe' ? 'text-green-600' : 'text-gray-400'} />
+                      <span className={`text-xs font-semibold ${metodoPago === 'stripe' ? 'text-green-700' : 'text-gray-500'}`}>Tarjeta</span>
+                      <span className="text-[10px] text-gray-400">Crédito / débito</span>
+                    </button>
+                  )}
+                  {tieneOxxo && (
+                    <button onClick={() => setMetodoPago('oxxo')} className={`p-3 rounded-xl border-2 flex flex-col items-center gap-1.5 transition-colors ${metodoPago === 'oxxo' ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                      <span className={`text-lg font-black ${metodoPago === 'oxxo' ? 'text-red-600' : 'text-gray-400'}`}>OXXO</span>
+                      <span className={`text-xs font-semibold ${metodoPago === 'oxxo' ? 'text-red-700' : 'text-gray-500'}`}>Pagar en tienda</span>
+                      <span className="text-[10px] text-gray-400">Voucher electrónico</span>
+                    </button>
+                  )}
+                  {tieneSpei && (
+                    <button onClick={() => setMetodoPago('spei')} className={`p-3 rounded-xl border-2 flex flex-col items-center gap-1.5 transition-colors ${metodoPago === 'spei' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                      <span className={`text-sm font-black ${metodoPago === 'spei' ? 'text-blue-600' : 'text-gray-400'}`}>SPEI</span>
+                      <span className={`text-xs font-semibold ${metodoPago === 'spei' ? 'text-blue-700' : 'text-gray-500'}`}>Transferencia</span>
+                      <span className="text-[10px] text-gray-400">Banco / CLABE</span>
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -353,7 +445,7 @@ export default function CheckoutPage() {
                 <div className="flex gap-3">
                   <Button variant="outline" className="flex-1" onClick={() => setStep(2)}>Regresar</Button>
                   <Button className="flex-1" size="lg" onClick={handlePagar} disabled={loading}>
-                    {loading ? 'Procesando…' : metodoPago === 'stripe' ? 'Continuar al pago' : 'Pagar con MercadoPago'}
+                    {loading ? 'Procesando…' : metodoPago === 'stripe' ? 'Continuar al pago' : metodoPago === 'oxxo' ? 'Generar voucher OXXO' : metodoPago === 'spei' ? 'Ver datos de transferencia' : 'Pagar con MercadoPago'}
                   </Button>
                 </div>
               </>

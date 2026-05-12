@@ -19,7 +19,7 @@ export default function EventosAdminPage() {
   const [empresas, setEmpresas] = useState<any[]>([]);
   const [modal, setModal] = useState(false);
   const [editando, setEditando] = useState<any>(null);
-  const [form, setForm] = useState({ nombre: '', lugar: '', fechaEvento: '', descripcion: '', imagen: '', estado: 'BORRADOR', ventaOnline: true, ventaTaquilla: true, empresaId: '' });
+  const [form, setForm] = useState({ nombre: '', lugar: '', fechaEvento: '', descripcion: '', imagen: '', estado: 'BORRADOR', ventaOnline: true, ventaTaquilla: true, aforoTotal: '', empresaId: '' });
   const [qrModal, setQrModal] = useState<{ qr: string; url: string; nombre: string; imagen: string | null; lugar: string | null; fechaEvento: string | null; empresa: { nombre: string; logo: string | null } | null } | null>(null);
   const [qrLoading, setQrLoading] = useState<string | null>(null);
   const token = (session?.user as any)?.apiToken;
@@ -39,8 +39,8 @@ export default function EventosAdminPage() {
   function abrirModal(ev?: any) {
     setEditando(ev ?? null);
     setForm(ev
-      ? { nombre: ev.nombre, lugar: ev.lugar, fechaEvento: ev.fechaEvento?.slice(0, 16) ?? '', descripcion: ev.descripcion ?? '', imagen: ev.imagen ?? '', estado: ev.estado, ventaOnline: ev.ventaOnline, ventaTaquilla: ev.ventaTaquilla, empresaId: ev.empresaId ?? '' }
-      : { nombre: '', lugar: '', fechaEvento: '', descripcion: '', imagen: '', estado: 'BORRADOR', ventaOnline: true, ventaTaquilla: true, empresaId: '' }
+      ? { nombre: ev.nombre, lugar: ev.lugar, fechaEvento: ev.fechaEvento?.slice(0, 16) ?? '', descripcion: ev.descripcion ?? '', imagen: ev.imagen ?? '', estado: ev.estado, ventaOnline: ev.ventaOnline, ventaTaquilla: ev.ventaTaquilla, aforoTotal: ev.aforoTotal?.toString() ?? '', empresaId: ev.empresaId ?? '' }
+      : { nombre: '', lugar: '', fechaEvento: '', descripcion: '', imagen: '', estado: 'BORRADOR', ventaOnline: true, ventaTaquilla: true, aforoTotal: '', empresaId: '' }
     );
     setModal(true);
   }
@@ -49,6 +49,7 @@ export default function EventosAdminPage() {
     const data: any = { ...form };
     if (!isSuperAdmin) delete data.empresaId;
     if (data.empresaId === '') data.empresaId = undefined;
+    if (data.aforoTotal !== '') data.aforoTotal = parseInt(data.aforoTotal); else delete data.aforoTotal;
     if (editando) { await api.admin.eventos.update(editando.id, data, token); }
     else { await api.admin.eventos.create(data, token); }
     setModal(false);
@@ -159,6 +160,10 @@ export default function EventosAdminPage() {
               <select className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={form.estado} onChange={(e) => setForm((p) => ({ ...p, estado: e.target.value }))}>
                 {['BORRADOR', 'ACTIVO', 'PAUSADO', 'FINALIZADO'].map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
+            </div>
+            <div className="space-y-1">
+              <Label>Aforo total <span className="text-gray-400 font-normal">(capacidad máxima del venue)</span></Label>
+              <Input type="number" min={0} placeholder="Ej: 1000" value={form.aforoTotal} onChange={(e) => setForm((p) => ({ ...p, aforoTotal: e.target.value }))} />
             </div>
             {isSuperAdmin && (
               <div className="space-y-1">

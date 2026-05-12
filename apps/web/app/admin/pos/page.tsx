@@ -19,6 +19,7 @@ const FORMAS_PAGO = [
 export default function AdminPOSPage() {
   const { data: session } = useSession();
   const token = (session?.user as any)?.apiToken ?? '';
+  const cajeroNombre = (session?.user as any)?.nombre ?? (session?.user as any)?.email ?? '';
 
   const [eventos, setEventos]       = useState<any[]>([]);
   const [eventoSel, setEventoSel]   = useState<any>(null);
@@ -30,6 +31,8 @@ export default function AdminPOSPage() {
   const [procesando, setProcesando] = useState(false);
   const [resultado, setResultado]   = useState<any>(null);
   const [error, setError]           = useState('');
+  const [corte, setCorte]           = useState<any>(null);
+  const [verCorte, setVerCorte]     = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -37,6 +40,7 @@ export default function AdminPOSPage() {
       setEventos(evs);
       if (evs.length > 0) setEventoSel(evs[0]);
     }).catch(() => {});
+    api.taquilla.turno(token).then(setCorte).catch(() => {});
   }, [token]);
 
   function adjustCart(cat: any, delta: number) {
@@ -92,10 +96,45 @@ export default function AdminPOSPage() {
     setError('');
   }
 
+  // ── Corte del día ────────────────────────────────────────────────────────
+  if (verCorte && corte) return (
+    <>
+      <style>{`@media print { .no-print { display: none !important; } @page { size: 80mm auto; margin: 2mm; } }`}</style>
+      <div className="p-4 max-w-xs mx-auto font-mono text-sm">
+        <div className="text-center border-b border-dashed border-gray-400 pb-3 mb-3">
+          <p className="font-bold text-base">RegioTicket</p>
+          <p className="text-xs text-gray-500">CORTE DE CAJA</p>
+          <p className="text-xs text-gray-500">{new Date().toLocaleString('es-MX')}</p>
+          {cajeroNombre && <p className="text-xs text-gray-500">Cajero: {cajeroNombre}</p>}
+        </div>
+        <div className="space-y-1 border-b border-dashed border-gray-400 pb-3 mb-3">
+          <div className="flex justify-between"><span>Efectivo</span><span className="font-bold">${Number(corte.efectivo).toFixed(2)}</span></div>
+          <div className="flex justify-between"><span>Tarjeta</span><span className="font-bold">${Number(corte.tarjeta).toFixed(2)}</span></div>
+          <div className="flex justify-between border-t border-gray-300 pt-1 mt-1 text-base font-black"><span>TOTAL</span><span>${Number(corte.total).toFixed(2)}</span></div>
+        </div>
+        <div className="space-y-1 border-b border-dashed border-gray-400 pb-3 mb-3">
+          <div className="flex justify-between"><span>Boletos vendidos</span><span>{corte.boletos}</span></div>
+          <div className="flex justify-between"><span>Órdenes</span><span>{corte.ordenes}</span></div>
+        </div>
+        <p className="text-center text-xs text-gray-400">* Ventas del día de hoy *</p>
+        <div className="no-print flex gap-2 mt-4">
+          <button onClick={() => window.print()} className="flex-1 h-10 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 flex items-center justify-center gap-2">
+            <PrinterIcon size={14} />Imprimir
+          </button>
+          <button onClick={() => setVerCorte(false)} className="flex-1 h-10 bg-green-600 text-white rounded-xl text-sm font-semibold">
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
   // ── Pantalla de éxito ────────────────────────────────────────────────────
   if (resultado) return (
-    <div className="p-6 max-w-lg mx-auto">
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+    <>
+      <style>{`@media print { .no-print { display: none !important; } @page { size: 80mm auto; margin: 2mm; } body { font-family: monospace; } }`}</style>
+    <div className="p-6 max-w-sm mx-auto">
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden print:rounded-none print:border-none print:shadow-none">
         {/* Header recibo */}
         <div className="bg-gray-900 px-6 py-5 text-center">
           <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -143,12 +182,12 @@ export default function AdminPOSPage() {
             )}
           </div>
 
-          <div className="flex gap-3 pt-1">
+          <div className="flex gap-3 pt-1 no-print">
             <button
               onClick={() => window.print()}
               className="flex-1 h-11 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 flex items-center justify-center gap-2 transition-colors"
             >
-              <PrinterIcon size={15} />Imprimir
+              <PrinterIcon size={15} />Imprimir ticket
             </button>
             <button
               onClick={nuevaVenta}
@@ -169,8 +208,8 @@ export default function AdminPOSPage() {
       {/* ── Columna izquierda: Catálogo ──────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 border-r border-gray-200 overflow-hidden">
 
-        {/* Selector de evento */}
-        <div className="px-4 py-3 border-b border-gray-100 bg-white shrink-0">
+        {/* Selector de evento + corte */}
+        <div className="px-4 py-3 border-b border-gray-100 bg-white shrink-0 flex items-center gap-2">
           <select
             value={eventoSel?.id ?? ''}
             onChange={(e) => {
@@ -182,6 +221,11 @@ export default function AdminPOSPage() {
             {eventos.length === 0 && <option value="">Sin eventos activos</option>}
             {eventos.map((ev) => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
           </select>
+          {corte && (
+            <button onClick={() => setVerCorte(true)} title="Corte del día" className="shrink-0 h-9 px-3 border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50 flex items-center gap-1.5 whitespace-nowrap">
+              <ReceiptIcon size={13} />Corte
+            </button>
+          )}
         </div>
 
         {/* Header evento */}

@@ -63,7 +63,7 @@ export async function obtenerEvento(req: Request, res: Response) {
       where: { slug: req.params.slug },
       include: {
         categorias: { orderBy: { ordenDisplay: 'asc' } },
-        empresa: { include: { config: { select: { stripePublicKey: true, colorPrimario: true } } } },
+        empresa: { include: { config: { select: { stripePublicKey: true, colorPrimario: true, oxxoActivo: true, speiActivo: true, speiClabe: true, speiNombreBanco: true, speiBeneficiario: true } } } },
       },
     });
     if (!evento) return res.status(404).json({ error: 'Evento no encontrado' });
@@ -75,8 +75,12 @@ export async function obtenerEvento(req: Request, res: Response) {
         return { ...cat, disponibles: redisStock ?? cat.disponibles };
       })
     );
-    const stripePublicKey = evento.empresa?.config?.stripePublicKey ?? null;
-    res.json({ ...evento, categorias, stripePublicKey });
+    const cfg = evento.empresa?.config;
+    const stripePublicKey = cfg?.stripePublicKey ?? null;
+    const oxxoActivo = !!(cfg?.oxxoActivo && stripePublicKey);
+    const speiActivo = !!(cfg?.speiActivo && cfg?.speiClabe);
+    const speiInfo = speiActivo ? { clabe: cfg!.speiClabe!, banco: cfg!.speiNombreBanco ?? '', beneficiario: cfg!.speiBeneficiario ?? '' } : null;
+    res.json({ ...evento, categorias, stripePublicKey, oxxoActivo, speiActivo, speiInfo });
   } catch {
     res.status(500).json({ error: 'Error obteniendo evento' });
   }
