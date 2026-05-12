@@ -167,11 +167,11 @@ export async function stripeWebhook(req: Request, res: Response) {
         const pdf = await generarPDFBoleto({
           uuid: boletos[0].id,
           numero: boletos[0].numero,
-          compradorNombre: orden.compradorNombre ?? undefined,
+          compradorNombre: orden.compradorNombre || undefined,
           evento: orden.evento.nombre,
           lugar: orden.evento.lugar,
           fechaEvento: formatFecha(orden.evento.fechaEvento),
-          descripcion: orden.evento.descripcion ?? undefined,
+          descripcion: orden.evento.descripcion || undefined,
           categoria: boletos[0].categoria.nombre,
           canal: 'ONLINE',
         });
