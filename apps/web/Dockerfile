@@ -7,7 +7,7 @@ COPY packages/db/package.json ./packages/db/
 COPY packages/shared/package.json ./packages/shared/
 COPY apps/web/package.json ./apps/web/
 
-RUN npm install --legacy-peer-deps
+RUN npm install --legacy-peer-deps && npm install --legacy-peer-deps sharp
 
 # ────────────────────────────────────────────────
 FROM node:20-alpine AS builder
@@ -38,6 +38,8 @@ COPY --from=builder /app/node_modules ./node_modules
 # Static assets and public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./.next/static
 COPY --from=builder /app/apps/web/public ./public
+
+RUN mkdir -p .next/cache && chown -R nextjs:nodejs .next/cache
 
 USER nextjs
 EXPOSE 3000
