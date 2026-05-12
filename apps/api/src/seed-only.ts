@@ -37,7 +37,7 @@ async function main() {
   });
   console.log('✅ Admin:', admin.email);
 
-  // ── Cajero demo
+  // ── Cajero demo (regioticket)
   const cajero = await prisma.usuario.upsert({
     where:  { email: 'cajero@regioticket.mx' },
     update: { empresaId: empresa.id },
@@ -50,6 +50,21 @@ async function main() {
     },
   });
   console.log('✅ Cajero:', cajero.email);
+
+  // ── Cajero iados (contraseña cajero123)
+  const cajeroIados = await prisma.usuario.upsert({
+    where:  { email: 'cajero@iados.mx' },
+    update: { password: await hash('cajero123'), empresaId: empresa.id, activo: true },
+    create: {
+      email:    'cajero@iados.mx',
+      password: await hash('cajero123'),
+      nombre:   'Cajero iaDoS',
+      rol:      'CAJERO',
+      empresaId: empresa.id,
+      activo:   true,
+    },
+  });
+  console.log('✅ Cajero:', cajeroIados.email);
 
   // ── Migrar registros existentes sin empresaId
   const [eventosHuerfanos, ordenesHuerfanas, usuariosHuerfanos] = await Promise.all([

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   LayoutDashboardIcon, CalendarIcon, UsersIcon, QrCodeIcon,
   LogOutIcon, SettingsIcon, BuildingIcon, WrenchIcon, MenuIcon, XIcon,
-  ActivityIcon, TagIcon,
+  ActivityIcon, TagIcon, ShoppingBagIcon,
 } from 'lucide-react';
 import { SessionProvider } from 'next-auth/react';
 
@@ -36,6 +36,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const links = [
     { href: '/admin/dashboard',            label: 'Dashboard',       icon: LayoutDashboardIcon },
     { href: '/admin/eventos',              label: 'Eventos',         icon: CalendarIcon },
+    { href: '/admin/pos',                  label: 'Punto de venta',  icon: ShoppingBagIcon },
     { href: '/admin/check-in',             label: 'Check-in live',   icon: ActivityIcon },
     { href: '/admin/codigos-promo',        label: 'Códigos promo',   icon: TagIcon },
     { href: '/admin/usuarios',             label: 'Usuarios',        icon: UsersIcon },
