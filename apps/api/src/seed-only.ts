@@ -137,6 +137,12 @@ async function main() {
     contacto_email:      'contacto@regioticket.mx',
     empresa_nombre:      'RegioTicket',
     empresa_ciudad:      'Apodaca, Nuevo León',
+    smtp_host:           'smtp.resend.com',
+    smtp_port:           '465',
+    smtp_user:           'resend',
+    smtp_pass:           '',
+    smtp_from:           'noreply@iados.mx',
+    smtp_from_nombre:    'RegioTicket',
   };
   for (const [clave, valor] of Object.entries(configDefaults)) {
     await prisma.configSistema.upsert({ where: { clave }, update: {}, create: { clave, valor } });
