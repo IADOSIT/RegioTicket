@@ -110,6 +110,11 @@ model ConfigEmpresa {
   emailContacto       String?
   telefonoContacto    String?
 
+  // Stripe (pago con tarjeta)
+  stripePublicKey     String?
+  stripeSecretKey     String?
+  stripeWebhookSecret String?
+
   updatedAt           DateTime @updatedAt
 }
 

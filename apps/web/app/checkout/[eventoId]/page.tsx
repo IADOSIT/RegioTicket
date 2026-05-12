@@ -1,4 +1,3 @@
-// Wizard de checkout 3 pasos: Selección → Datos → Pago
 'use client';
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
@@ -9,10 +8,51 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatMXN, formatFecha } from '@/lib/utils';
 import { api } from '@/lib/api';
-import { ShieldCheckIcon, ClockIcon, LockIcon } from 'lucide-react';
+import { ShieldCheckIcon, ClockIcon, LockIcon, CreditCardIcon, SmartphoneIcon } from 'lucide-react';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
-const TIMER_SEGUNDOS = 600; // 10 min
+const TIMER_SEGUNDOS = 600;
 
+// ── Formulario de pago con Stripe Elements ──────────────────────────────────
+function StripeForm({ onSuccess, onBack }: { onSuccess: () => void; onBack: () => void }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+    setLoading(true);
+    setError('');
+    const { error: err } = await stripe.confirmPayment({
+      elements,
+      redirect: 'if_required',
+    });
+    if (err) {
+      setError(err.message || 'Error procesando pago');
+      setLoading(false);
+    } else {
+      onSuccess();
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <PaymentElement />
+      {error && <p className="text-red-500 text-sm">{error}</p>}
+      <div className="flex gap-3 pt-2">
+        <Button type="button" variant="outline" className="flex-1" onClick={onBack}>Regresar</Button>
+        <Button type="submit" className="flex-1" size="lg" disabled={loading || !stripe}>
+          {loading ? 'Procesando…' : 'Confirmar pago'}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+// ── Página principal ─────────────────────────────────────────────────────────
 export default function CheckoutPage() {
   const { eventoId } = useParams();
   const searchParams = useSearchParams();
@@ -24,18 +64,21 @@ export default function CheckoutPage() {
   const [eventoError, setEventoError] = useState(false);
   const [seleccion, setSeleccion] = useState<{ categoriaId: string; cantidad: number }[]>([]);
   const [comprador, setComprador] = useState({ nombre: '', email: '', tel: '', whatsapp: '' });
+  const [metodoPago, setMetodoPago] = useState<'mercadopago' | 'stripe'>('mercadopago');
   const [timer, setTimer] = useState(TIMER_SEGUNDOS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [stripeState, setStripeState] = useState<{ clientSecret: string; stripePromise: any } | null>(null);
+  const [pagado, setPagado] = useState(false);
   const timerRef = useRef<any>(null);
 
   useEffect(() => {
     api.eventos.get(eventoId as string)
       .then((ev) => {
         setEvento(ev);
-        if (catIdPreselect) {
-          setSeleccion([{ categoriaId: catIdPreselect, cantidad: 1 }]);
-        }
+        if (catIdPreselect) setSeleccion([{ categoriaId: catIdPreselect, cantidad: 1 }]);
+        // Si Stripe disponible y no MP, auto-seleccionar tarjeta
+        if (ev.stripePublicKey && !ev.mpPublicKey) setMetodoPago('stripe');
       })
       .catch(() => setEventoError(true));
   }, [eventoId, catIdPreselect]);
@@ -44,7 +87,7 @@ export default function CheckoutPage() {
     if (step === 1) {
       timerRef.current = setInterval(() => {
         setTimer((t) => {
-          if (t <= 1) { clearInterval(timerRef.current); router.push('/checkout/expirado'); return 0; }
+          if (t <= 1) { clearInterval(timerRef.current); router.push('/'); return 0; }
           return t - 1;
         });
       }, 1000);
@@ -66,46 +109,67 @@ export default function CheckoutPage() {
   }
 
   function getTotal() {
-    return seleccion.reduce((acc, s) => {
-      const cat = getCat(s.categoriaId);
-      return acc + (cat?.precio ?? 0) * s.cantidad;
-    }, 0);
+    return seleccion.reduce((acc, s) => acc + (getCat(s.categoriaId)?.precio ?? 0) * s.cantidad, 0);
   }
 
   async function handlePagar() {
     setLoading(true);
     setError('');
     try {
-      const { init_point } = await api.ordenes.crear({
-        eventoId,
-        items: seleccion,
-        compradorNombre: comprador.nombre,
-        compradorEmail: comprador.email,
-        compradorTel: comprador.tel,
-        compradorWhatsapp: comprador.whatsapp,
-      });
-      window.location.href = init_point;
+      if (metodoPago === 'stripe') {
+        const { clientSecret, publicKey } = await api.stripe.intent({
+          eventoId,
+          items: seleccion,
+          compradorNombre: comprador.nombre,
+          compradorEmail: comprador.email,
+          compradorTel: comprador.tel,
+          compradorWhatsapp: comprador.whatsapp,
+        });
+        const stripePromise = loadStripe(publicKey);
+        setStripeState({ clientSecret, stripePromise });
+      } else {
+        const { init_point } = await api.ordenes.crear({
+          eventoId,
+          items: seleccion,
+          compradorNombre: comprador.nombre,
+          compradorEmail: comprador.email,
+          compradorTel: comprador.tel,
+          compradorWhatsapp: comprador.whatsapp,
+        });
+        window.location.href = init_point;
+      }
     } catch (e: any) {
       setError(e.message);
+    } finally {
       setLoading(false);
     }
   }
 
+  const tieneStripe = !!evento?.stripePublicKey;
+  const tieneMP = true; // MercadoPago siempre disponible como fallback del sistema
   const minutos = String(Math.floor(timer / 60)).padStart(2, '0');
   const segundos = String(timer % 60).padStart(2, '0');
 
   if (eventoError) return (
-    <>
-      <Header />
-      <div className="text-center py-20 text-gray-400"><p>Evento no encontrado.</p></div>
-      <Footer />
-    </>
+    <><Header /><div className="text-center py-20 text-gray-400"><p>Evento no encontrado.</p></div><Footer /></>
+  );
+  if (!evento) return (
+    <><Header /><div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin" /></div></>
   );
 
-  if (!evento) return (
+  // Pago exitoso con Stripe
+  if (pagado) return (
     <>
       <Header />
-      <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin" /></div>
+      <main className="max-w-lg mx-auto px-4 py-20 text-center">
+        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <ShieldCheckIcon size={32} className="text-green-600" />
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">¡Pago exitoso!</h1>
+        <p className="text-gray-500 mb-6">Recibirás tu boleto por email en unos minutos.</p>
+        <Button onClick={() => router.push('/mis-boletos')}>Ver mis boletos</Button>
+      </main>
+      <Footer />
     </>
   );
 
@@ -117,9 +181,7 @@ export default function CheckoutPage() {
         <div className="flex items-center gap-2 mb-8">
           {['Selección', 'Datos', 'Pago'].map((label, i) => (
             <div key={i} className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${step > i + 1 ? 'bg-green-600 text-white' : step === i + 1 ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-400'}`}>
-                {i + 1}
-              </div>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${step >= i + 1 ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-400'}`}>{i + 1}</div>
               <span className={`text-sm font-medium hidden sm:inline ${step === i + 1 ? 'text-green-600' : 'text-gray-400'}`}>{label}</span>
               {i < 2 && <div className="flex-1 h-px bg-gray-200 min-w-[24px]" />}
             </div>
@@ -153,17 +215,13 @@ export default function CheckoutPage() {
                 </div>
               );
             })}
-
             {seleccion.length > 0 && (
               <div className="border-t border-gray-100 pt-4 flex items-center justify-between">
                 <span className="text-gray-600">Subtotal ({seleccion.reduce((a, s) => a + s.cantidad, 0)} boletos)</span>
                 <span className="font-bold text-xl text-gray-900">{formatMXN(getTotal())}</span>
               </div>
             )}
-
-            <Button className="w-full" size="lg" onClick={() => setStep(2)} disabled={seleccion.length === 0}>
-              Continuar
-            </Button>
+            <Button className="w-full" size="lg" onClick={() => setStep(2)} disabled={seleccion.length === 0}>Continuar</Button>
           </div>
         )}
 
@@ -182,7 +240,6 @@ export default function CheckoutPage() {
             <div className="space-y-1">
               <Label htmlFor="whatsapp">WhatsApp <span className="text-red-500">*</span></Label>
               <Input id="whatsapp" type="tel" placeholder="+52 81 1234 5678" value={comprador.whatsapp} onChange={(e) => setComprador((p) => ({ ...p, whatsapp: e.target.value }))} />
-              <p className="text-xs text-gray-400">Te enviaremos tu boleto digital por WhatsApp</p>
             </div>
             <div className="space-y-1">
               <Label htmlFor="tel">Teléfono (opcional)</Label>
@@ -198,6 +255,7 @@ export default function CheckoutPage() {
         {/* Paso 3: Pago */}
         {step === 3 && (
           <div className="space-y-6">
+            {/* Resumen */}
             <div className="border border-gray-200 rounded-xl p-4 space-y-2">
               <h3 className="font-semibold text-gray-900">Resumen de compra</h3>
               {seleccion.map((s) => {
@@ -214,23 +272,55 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="flex gap-3 text-xs text-gray-500">
-              <ShieldCheckIcon size={16} className="text-green-600 shrink-0 mt-0.5" />
-              <span>Pago 100% seguro con MercadoPago. Tus datos están protegidos.</span>
-            </div>
-            <div className="flex gap-3 text-xs text-gray-500">
-              <LockIcon size={16} className="text-green-600 shrink-0 mt-0.5" />
-              <span>Recibirás tu boleto en PDF al email registrado.</span>
-            </div>
+            {/* Selector de método de pago */}
+            {tieneStripe && tieneMP && !stripeState && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-700">Método de pago</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setMetodoPago('stripe')}
+                    className={`p-3 rounded-xl border-2 flex flex-col items-center gap-1.5 transition-colors ${metodoPago === 'stripe' ? 'border-green-600 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}
+                  >
+                    <CreditCardIcon size={20} className={metodoPago === 'stripe' ? 'text-green-600' : 'text-gray-400'} />
+                    <span className={`text-xs font-semibold ${metodoPago === 'stripe' ? 'text-green-700' : 'text-gray-500'}`}>Tarjeta</span>
+                    <span className="text-[10px] text-gray-400">Crédito / débito</span>
+                  </button>
+                  <button
+                    onClick={() => setMetodoPago('mercadopago')}
+                    className={`p-3 rounded-xl border-2 flex flex-col items-center gap-1.5 transition-colors ${metodoPago === 'mercadopago' ? 'border-green-600 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}
+                  >
+                    <SmartphoneIcon size={20} className={metodoPago === 'mercadopago' ? 'text-green-600' : 'text-gray-400'} />
+                    <span className={`text-xs font-semibold ${metodoPago === 'mercadopago' ? 'text-green-700' : 'text-gray-500'}`}>MercadoPago</span>
+                    <span className="text-[10px] text-gray-400">App / transferencia</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-
-            <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => setStep(2)}>Regresar</Button>
-              <Button className="flex-1" size="lg" onClick={handlePagar} disabled={loading}>
-                {loading ? 'Procesando…' : `Pagar con MercadoPago`}
-              </Button>
-            </div>
+            {/* Stripe Elements (se muestra tras crear el intent) */}
+            {stripeState ? (
+              <Elements stripe={stripeState.stripePromise} options={{ clientSecret: stripeState.clientSecret, locale: 'es-419' }}>
+                <StripeForm onSuccess={() => setPagado(true)} onBack={() => setStripeState(null)} />
+              </Elements>
+            ) : (
+              <>
+                <div className="flex gap-3 text-xs text-gray-500">
+                  <ShieldCheckIcon size={16} className="text-green-600 shrink-0 mt-0.5" />
+                  <span>Pago 100% seguro. Tus datos están protegidos con cifrado SSL.</span>
+                </div>
+                <div className="flex gap-3 text-xs text-gray-500">
+                  <LockIcon size={16} className="text-green-600 shrink-0 mt-0.5" />
+                  <span>Recibirás tu boleto en PDF al email registrado.</span>
+                </div>
+                {error && <p className="text-red-500 text-sm">{error}</p>}
+                <div className="flex gap-3">
+                  <Button variant="outline" className="flex-1" onClick={() => setStep(2)}>Regresar</Button>
+                  <Button className="flex-1" size="lg" onClick={handlePagar} disabled={loading}>
+                    {loading ? 'Procesando…' : metodoPago === 'stripe' ? 'Continuar al pago' : 'Pagar con MercadoPago'}
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </main>

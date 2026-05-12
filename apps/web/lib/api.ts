@@ -28,6 +28,12 @@ export const api = {
     crear: (body: object) => request<any>('/ordenes', { method: 'POST', body: JSON.stringify(body) }),
   },
 
+  stripe: {
+    intent: (body: object) => request<{ clientSecret: string; ordenId: string; publicKey: string }>(
+      '/stripe/intent', { method: 'POST', body: JSON.stringify(body) }
+    ),
+  },
+
   boletos: {
     get: (uuid: string) => request<any>(`/boletos/${uuid}`),
     reenviar: (uuid: string, email?: string) =>

@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import {
   SaveIcon, CheckCircleIcon, MailIcon, MessageCircleIcon,
-  ClockIcon, PaletteIcon, GlobeIcon, ExternalLinkIcon,
+  ClockIcon, PaletteIcon, GlobeIcon, ExternalLinkIcon, CreditCardIcon,
 } from 'lucide-react';
 import { ImageUploadField } from '@/components/ImageUploadField';
 
@@ -32,6 +32,7 @@ function ConfigEmpresaForm() {
     colorPrimario: '#16a34a', descripcionCorta: '', heroTexto: '',
     bannerUrl: '', facebook: '', instagram: '', tiktok: '',
     emailContacto: '', telefonoContacto: '',
+    stripePublicKey: '', stripeSecretKey: '', stripeWebhookSecret: '',
   });
   const [slug, setSlug] = useState('');
   const [guardado, setGuardado] = useState(false);
@@ -193,6 +194,19 @@ function ConfigEmpresaForm() {
             Con esta opción el sistema genera links wa.me. Para envío automático configura la <strong>Meta WhatsApp Cloud API</strong>.
           </div>
         )}
+      </Section>
+
+      {/* Stripe */}
+      <Section title="Pago con tarjeta (Stripe)" icon={CreditCardIcon}>
+        <div className="p-3 bg-blue-50 rounded-lg text-xs text-blue-800 space-y-1">
+          <p>Activa el pago con tarjeta de crédito/débito para esta empresa en el checkout.</p>
+          <p><strong>Publishable Key:</strong> empieza con <code className="bg-blue-100 px-1 rounded">pk_live_</code> o <code className="bg-blue-100 px-1 rounded">pk_test_</code></p>
+          <p><strong>Secret Key:</strong> empieza con <code className="bg-blue-100 px-1 rounded">sk_live_</code> — nunca la compartas.</p>
+          <p><strong>Webhook Secret:</strong> obtenlo en el Dashboard de Stripe → Webhooks. URL del endpoint: <code className="bg-blue-100 px-1 rounded">/api/stripe/webhook</code></p>
+        </div>
+        <Field label="Publishable Key" id="stripePublicKey" placeholder="pk_live_..." value={form.stripePublicKey} onChange={(v: string) => set('stripePublicKey', v)} />
+        <Field label="Secret Key" id="stripeSecretKey" type="password" placeholder="sk_live_..." value={form.stripeSecretKey} onChange={(v: string) => set('stripeSecretKey', v)} hint="Se guarda cifrado, no se muestra en texto plano" />
+        <Field label="Webhook Secret" id="stripeWebhookSecret" type="password" placeholder="whsec_..." value={form.stripeWebhookSecret} onChange={(v: string) => set('stripeWebhookSecret', v)} />
       </Section>
 
       {/* Ventana de validación */}

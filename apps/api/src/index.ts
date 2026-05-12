@@ -14,6 +14,7 @@ import adminRouter from './routes/admin';
 import webhookRouter from './routes/webhook';
 import misBoletoRouter from './routes/misBoletos';
 import uploadRouter from './routes/upload';
+import stripeRouter from './routes/stripe';
 import { startExpirarOrdenes } from './jobs/expirarOrdenes';
 import { existsSync, mkdirSync } from 'fs';
 
@@ -27,8 +28,9 @@ const PORT = process.env.PORT || 4000;
 app.use(helmet());
 app.use(cors({ origin: process.env.NEXTAUTH_URL || '*', credentials: true }));
 
-// Webhook de MercadoPago necesita body raw
+// Webhooks necesitan body raw para verificación de firma
 app.use('/api/webhook', express.raw({ type: 'application/json' }));
+app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -43,6 +45,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/webhook', webhookRouter);
 app.use('/api/mis-boletos', misBoletoRouter);
 app.use('/api/admin/upload', uploadRouter);
+app.use('/api/stripe', stripeRouter);
 app.use('/uploads', express.static(UPLOADS_PATH));
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, ts: new Date() }));

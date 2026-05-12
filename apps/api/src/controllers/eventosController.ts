@@ -47,6 +47,7 @@ export async function getEmpresaPublic(req: Request, res: Response) {
             bannerUrl: true, facebook: true, instagram: true, tiktok: true,
             emailContacto: true, telefonoContacto: true,
             waProvider: true, waFrom: true,
+            stripePublicKey: true,
           },
         },
       },
@@ -60,7 +61,10 @@ export async function obtenerEvento(req: Request, res: Response) {
   try {
     const evento = await prisma.evento.findUnique({
       where: { slug: req.params.slug },
-      include: { categorias: { orderBy: { ordenDisplay: 'asc' } } },
+      include: {
+        categorias: { orderBy: { ordenDisplay: 'asc' } },
+        empresa: { include: { config: { select: { stripePublicKey: true, colorPrimario: true } } } },
+      },
     });
     if (!evento) return res.status(404).json({ error: 'Evento no encontrado' });
 
@@ -71,7 +75,8 @@ export async function obtenerEvento(req: Request, res: Response) {
         return { ...cat, disponibles: redisStock ?? cat.disponibles };
       })
     );
-    res.json({ ...evento, categorias });
+    const stripePublicKey = evento.empresa?.config?.stripePublicKey ?? null;
+    res.json({ ...evento, categorias, stripePublicKey });
   } catch {
     res.status(500).json({ error: 'Error obteniendo evento' });
   }

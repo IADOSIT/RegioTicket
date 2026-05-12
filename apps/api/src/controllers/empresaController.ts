@@ -54,7 +54,7 @@ export async function getConfigEmpresa(req: Request, res: Response) {
     if (!config) {
       config = await prisma.configEmpresa.create({ data: { empresaId } });
     }
-    const safe = { ...config, smtpPass: config.smtpPass ? '••••••••' : '', waToken: config.waToken ? '••••••••' : '' };
+    const safe = { ...config, smtpPass: config.smtpPass ? '••••••••' : '', waToken: config.waToken ? '••••••••' : '', stripeSecretKey: config.stripeSecretKey ? '••••••••' : '', stripeWebhookSecret: config.stripeWebhookSecret ? '••••••••' : '' };
     res.json(safe);
   } catch { res.status(500).json({ error: 'Error obteniendo configuración' }); }
 }
@@ -73,6 +73,8 @@ export async function saveConfigEmpresa(req: Request, res: Response) {
       // Apariencia
       colorPrimario, descripcionCorta, heroTexto, bannerUrl,
       facebook, instagram, tiktok, emailContacto, telefonoContacto,
+      // Stripe
+      stripePublicKey, stripeSecretKey, stripeWebhookSecret,
     } = req.body;
 
     const data: any = {
@@ -83,10 +85,13 @@ export async function saveConfigEmpresa(req: Request, res: Response) {
       ventanaDespuesHoras: ventanaDespuesHoras ? Number(ventanaDespuesHoras) : undefined,
       colorPrimario, descripcionCorta, heroTexto, bannerUrl,
       facebook, instagram, tiktok, emailContacto, telefonoContacto,
+      stripePublicKey,
     };
     // No sobreescribir con placeholder
     if (smtpPass && smtpPass !== '••••••••') data.smtpPass = smtpPass;
     if (waToken && waToken !== '••••••••') data.waToken = waToken;
+    if (stripeSecretKey && stripeSecretKey !== '••••••••') data.stripeSecretKey = stripeSecretKey;
+    if (stripeWebhookSecret && stripeWebhookSecret !== '••••••••') data.stripeWebhookSecret = stripeWebhookSecret;
 
     // Limpiar undefined para no pisar valores existentes con null
     Object.keys(data).forEach((k) => { if (data[k] === undefined) delete data[k]; });
