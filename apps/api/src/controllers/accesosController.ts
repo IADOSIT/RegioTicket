@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import crypto from 'crypto';
 import { prisma, formatFecha } from '../utils/helpers';
 import redis from '../services/redis';
+import { broadcastEvento } from '../services/sse';
 
 function firmaEsperada(boletoId: string): string {
   return crypto.createHmac('sha256', process.env.QR_SECRET || 'rt-secret-key')
@@ -133,13 +134,22 @@ export async function marcarUsado(req: Request, res: Response) {
         return res.status(400).json({ error: 'Fuera de la ventana de validación', estado: 'FUERA_DE_VENTANA' });
       }
 
-      // Marcar USADO atómicamente
-      await prisma.$transaction([
+      const [, acceso] = await prisma.$transaction([
         prisma.boleto.update({ where: { id: uuid }, data: { estado: 'USADO' } }),
         prisma.acceso.create({
           data: { boletoId: uuid, validadorId: req.user?.sub, dispositivo: dispositivo ?? req.headers['user-agent'], exitoso: true },
         }),
       ]);
+
+      broadcastEvento(boleto.orden.eventoId, {
+        tipo: 'acceso',
+        id: acceso.id,
+        timestamp: acceso.timestamp,
+        boletoId: uuid,
+        numero: boleto.numero,
+        categoria: boleto.orden.evento.nombre,
+        compradorNombre: boleto.orden.compradorNombre,
+      });
 
       res.json({ ok: true, estado: 'USADO' });
     } finally {

@@ -30,7 +30,7 @@ function fromField(cfg?: SmtpConfig) {
   return `"${nombre}" <${email}>`;
 }
 
-function htmlBoleto(nombre: string, evento: string, boletoUUID: string, baseUrl: string) {
+function htmlBoleto(nombre: string, evento: string, boletoUUID: string, baseUrl: string, cantidad = 1) {
   const url = `${baseUrl}/boleto/${boletoUUID}`;
   return `
   <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
@@ -38,11 +38,11 @@ function htmlBoleto(nombre: string, evento: string, boletoUUID: string, baseUrl:
       <span style="font-size:24px;font-weight:800;color:#fff;">Regio<span style="color:#4ade80;">Ticket</span></span>
     </div>
     <div style="padding:32px;">
-      <h2 style="color:#111827;margin:0 0 8px;">¡Tu boleto está listo!</h2>
+      <h2 style="color:#111827;margin:0 0 8px;">¡Tu${cantidad > 1 ? 's ' + cantidad : ''} boleto${cantidad > 1 ? 's están' : ' está'} listo${cantidad > 1 ? 's' : ''}!</h2>
       <p style="color:#6b7280;margin:0 0 24px;">Hola <strong>${nombre}</strong>, tu compra fue exitosa.</p>
       <div style="background:#f9fafb;border-radius:8px;padding:16px;margin-bottom:24px;">
         <p style="margin:0;font-size:14px;color:#374151;">Evento: <strong>${evento}</strong></p>
-        <p style="margin:8px 0 0;font-size:13px;color:#6b7280;">Adjunto encontrarás tu boleto en PDF. Presenta el código QR en la entrada.</p>
+        <p style="margin:8px 0 0;font-size:13px;color:#6b7280;">Adjunto encontrarás ${cantidad > 1 ? 'tus ' + cantidad + ' boletos en PDF' : 'tu boleto en PDF'}. Presenta el código QR en la entrada.</p>
       </div>
       <a href="${url}" style="display:inline-block;background:#16a34a;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Ver mi boleto online</a>
       <p style="margin-top:24px;font-size:12px;color:#9ca3af;">Este boleto es personal e intransferible. Cualquier reproducción no autorizada será rechazada.</p>
@@ -55,21 +55,22 @@ function htmlBoleto(nombre: string, evento: string, boletoUUID: string, baseUrl:
 
 export async function enviarBoleto(opts: {
   to: string; nombre: string; evento: string;
-  pdfBuffer: Buffer; boletoUUID: string;
+  pdfs: Array<{ buffer: Buffer; uuid: string; numero: number }>;
   smtpConfig?: SmtpConfig; baseUrl?: string;
 }) {
   const transporter = getTransport(opts.smtpConfig);
   const base = opts.baseUrl || process.env.NEXTAUTH_URL || 'https://regioticket.iados.online';
+  const primerUUID = opts.pdfs[0]?.uuid ?? '';
   await transporter.sendMail({
     from: fromField(opts.smtpConfig),
     to: opts.to,
-    subject: `Tu boleto para ${opts.evento} — RegioTicket`,
-    html: htmlBoleto(opts.nombre, opts.evento, opts.boletoUUID, base),
-    attachments: [{
-      filename: `boleto-${opts.boletoUUID.slice(0, 8)}.pdf`,
-      content: opts.pdfBuffer,
+    subject: `Tu${opts.pdfs.length > 1 ? 's ' + opts.pdfs.length : ''} boleto${opts.pdfs.length > 1 ? 's' : ''} para ${opts.evento} — RegioTicket`,
+    html: htmlBoleto(opts.nombre, opts.evento, primerUUID, base, opts.pdfs.length),
+    attachments: opts.pdfs.map((p) => ({
+      filename: `boleto-${p.numero}.pdf`,
+      content: p.buffer,
       contentType: 'application/pdf',
-    }],
+    })),
   });
 }
 
@@ -102,7 +103,7 @@ export async function enviarReset(opts: {
 
 export async function enviarReenvio(opts: {
   to: string; nombre: string; evento: string;
-  pdfBuffer: Buffer; boletoUUID: string;
+  pdfBuffer: Buffer; boletoUUID: string; numero?: number;
   smtpConfig?: SmtpConfig; baseUrl?: string;
 }) {
   const transporter = getTransport(opts.smtpConfig);
@@ -113,7 +114,7 @@ export async function enviarReenvio(opts: {
     subject: `Reenvío de boleto — ${opts.evento}`,
     html: htmlBoleto(opts.nombre, opts.evento, opts.boletoUUID, base),
     attachments: [{
-      filename: `boleto-${opts.boletoUUID.slice(0, 8)}.pdf`,
+      filename: `boleto-${opts.numero ?? opts.boletoUUID.slice(0, 8)}.pdf`,
       content: opts.pdfBuffer,
       contentType: 'application/pdf',
     }],

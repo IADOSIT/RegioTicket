@@ -1,9 +1,9 @@
 // Rutas del panel admin
 import { Router } from 'express';
 import {
-  listarEventosAdmin, crearEvento, actualizarEvento, eliminarEvento,
+  listarEventosAdmin, crearEvento, actualizarEvento, eliminarEvento, cancelarEvento,
   listarCategorias, crearCategoria, actualizarCategoria, toggleOnline, toggleTaquilla,
-  listarOrdenes, exportarOrdenes, dashboardStream,
+  listarOrdenes, exportarOrdenes, dashboardStream, dashboardGlobal, checkInStream,
   listarUsuarios, crearUsuario, actualizarUsuario,
   getMapa, saveMapa,
   getConfig, saveConfig,
@@ -14,6 +14,9 @@ import {
   listarEmpresas, crearEmpresa, actualizarEmpresa,
   getConfigEmpresa, saveConfigEmpresa,
 } from '../controllers/empresaController';
+import {
+  listarCodigos, crearCodigo, actualizarCodigo, eliminarCodigo, validarCodigo,
+} from '../controllers/promoController';
 import { requireAuth } from '../middleware/auth';
 import { requireRol } from '../middleware/roles';
 import { validate } from '../middleware/validate';
@@ -60,6 +63,7 @@ router.get('/eventos', listarEventosAdmin);
 router.post('/eventos', validate(eventoSchema), crearEvento);
 router.put('/eventos/:id', validate(eventoSchema), actualizarEvento);
 router.delete('/eventos/:id', eliminarEvento);
+router.post('/eventos/:id/cancelar', cancelarEvento);
 router.get('/eventos/:id/qr', getQREvento);
 
 // Categorías
@@ -73,7 +77,18 @@ router.put('/categorias/:id/toggle-taquilla', toggleTaquilla);
 router.get('/ordenes', listarOrdenes);
 router.get('/ordenes/exportar', exportarOrdenes);
 router.put('/ordenes/:id/reembolsar', reembolsarOrden);
+
+// Dashboard
+router.get('/dashboard-global', requireRol('SUPER_ADMIN'), dashboardGlobal);
 router.get('/dashboard/:eventoId', dashboardStream);
+router.get('/check-in/:eventoId', checkInStream);
+
+// Códigos promo
+router.get('/codigos-promo', listarCodigos);
+router.post('/codigos-promo', crearCodigo);
+router.put('/codigos-promo/:id', actualizarCodigo);
+router.delete('/codigos-promo/:id', eliminarCodigo);
+router.post('/codigos-promo/validar', validarCodigo);
 
 // Usuarios
 router.get('/usuarios', listarUsuarios);

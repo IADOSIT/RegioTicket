@@ -26,12 +26,14 @@ export const api = {
 
   ordenes: {
     crear: (body: object) => request<any>('/ordenes', { method: 'POST', body: JSON.stringify(body) }),
+    validarPromo: (body: object) => request<any>('/ordenes/validar-promo', { method: 'POST', body: JSON.stringify(body) }),
   },
 
   stripe: {
     intent: (body: object) => request<{ clientSecret: string; ordenId: string; publicKey: string }>(
       '/stripe/intent', { method: 'POST', body: JSON.stringify(body) }
     ),
+    validarPromo: (body: object) => request<any>('/stripe/validar-promo', { method: 'POST', body: JSON.stringify(body) }),
   },
 
   boletos: {
@@ -106,6 +108,23 @@ export const api = {
       reembolsar: (id: string, token: string) =>
         request<any>(`/admin/ordenes/${id}/reembolsar`, { method: 'PUT', headers: authHeaders(token) }),
     },
+    dashboard: {
+      global: (token: string) => request<any>('/admin/dashboard-global', { headers: authHeaders(token) }),
+    },
+    codigosPromo: {
+      list: (token: string, eventoId?: string) =>
+        request<any[]>(`/admin/codigos-promo${eventoId ? `?eventoId=${eventoId}` : ''}`, { headers: authHeaders(token) }),
+      create: (body: object, token: string) =>
+        request<any>('/admin/codigos-promo', { method: 'POST', body: JSON.stringify(body), headers: authHeaders(token) }),
+      update: (id: string, body: object, token: string) =>
+        request<any>(`/admin/codigos-promo/${id}`, { method: 'PUT', body: JSON.stringify(body), headers: authHeaders(token) }),
+      delete: (id: string, token: string) =>
+        request<any>(`/admin/codigos-promo/${id}`, { method: 'DELETE', headers: authHeaders(token) }),
+      validar: (body: object, token: string) =>
+        request<any>('/admin/codigos-promo/validar', { method: 'POST', body: JSON.stringify(body), headers: authHeaders(token) }),
+    },
+    cancelarEvento: (id: string, token: string) =>
+      request<any>(`/admin/eventos/${id}/cancelar`, { method: 'POST', headers: authHeaders(token) }),
     usuarios: {
       list: (token: string) => request<any[]>('/admin/usuarios', { headers: authHeaders(token) }),
       create: (body: object, token: string) =>

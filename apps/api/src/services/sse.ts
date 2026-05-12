@@ -15,7 +15,7 @@ export function addSSEClient(res: Response, eventoId: string): SSEClient {
 export function broadcastEvento(eventoId: string, data: object) {
   const payload = `data: ${JSON.stringify(data)}\n\n`;
   for (const client of clients) {
-    if (client.eventoId === eventoId || client.eventoId === `admin:${eventoId}`) {
+    if (client.eventoId === eventoId || client.eventoId === `admin:${eventoId}` || client.eventoId === `checkin:${eventoId}`) {
       try {
         client.res.write(payload);
       } catch {

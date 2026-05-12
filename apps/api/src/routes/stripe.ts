@@ -1,13 +1,12 @@
 import { Router } from 'express';
 import { crearStripeIntent, stripeWebhook } from '../controllers/stripeController';
+import { validarCodigo } from '../controllers/promoController';
 import { publicLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
-// Webhook: raw body necesario para verificar firma de Stripe
 router.post('/webhook', stripeWebhook);
-
-// Crear Payment Intent (público con rate limit)
 router.post('/intent', publicLimiter, crearStripeIntent);
+router.post('/validar-promo', publicLimiter, validarCodigo);
 
 export default router;

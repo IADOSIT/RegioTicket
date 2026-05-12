@@ -17,7 +17,7 @@ function makeStripe(secretKey: string) {
 
 export async function crearStripeIntent(req: Request, res: Response) {
   try {
-    const { eventoId, items, compradorNombre, compradorEmail, compradorTel, compradorWhatsapp } = req.body;
+    const { eventoId, items, compradorNombre, compradorEmail, compradorTel, compradorWhatsapp, codigoPromo } = req.body;
     if (!eventoId || !items?.length || !compradorEmail) {
       return res.status(400).json({ error: 'Datos incompletos' });
     }
@@ -33,16 +33,28 @@ export async function crearStripeIntent(req: Request, res: Response) {
     const publicKey = cfg?.stripePublicKey;
     if (!secretKey || !publicKey) return res.status(400).json({ error: 'Stripe no configurado para este evento' });
 
-    // Calcular total
     const catIds = items.map((i: any) => i.categoriaId);
     const categorias = await prisma.categoria.findMany({ where: { id: { in: catIds } } });
-    const total = items.reduce((acc: number, i: any) => {
+    const subtotal = items.reduce((acc: number, i: any) => {
       const cat = categorias.find((c) => c.id === i.categoriaId);
       return acc + (cat ? Number(cat.precio) * i.cantidad : 0);
     }, 0);
-    if (total <= 0) return res.status(400).json({ error: 'Total inválido' });
+    if (subtotal <= 0) return res.status(400).json({ error: 'Total inválido' });
 
-    // Crear Orden PENDIENTE
+    // Aplicar código promo
+    let descuento = 0;
+    let promoId: string | null = null;
+    if (codigoPromo) {
+      const promo = await prisma.codigoPromo.findUnique({ where: { codigo: codigoPromo.toUpperCase().trim() } });
+      if (promo && promo.activo && (!promo.expiresAt || promo.expiresAt > new Date()) && (!promo.maxUsos || promo.usosActuales < promo.maxUsos) && (!promo.eventoId || promo.eventoId === eventoId)) {
+        if (promo.tipo === 'PORCENTAJE') descuento = Math.round(subtotal * Number(promo.valor)) / 100;
+        else if (promo.tipo === 'FIJO') descuento = Math.min(Number(promo.valor), subtotal);
+        else if (promo.tipo === 'CORTESIA') descuento = subtotal;
+        promoId = promo.id;
+      }
+    }
+    const total = Math.max(0, subtotal - descuento);
+
     const orden = await prisma.orden.create({
       data: {
         eventoId,
@@ -55,17 +67,25 @@ export async function crearStripeIntent(req: Request, res: Response) {
         compradorTel: compradorTel || null,
         compradorWhatsapp: compradorWhatsapp || null,
         total,
+        descuento: descuento > 0 ? descuento : null,
+        codigoPromoId: promoId,
         expiresAt: new Date(Date.now() + 30 * 60 * 1000),
         items: {
           create: items.map((i: any) => {
             const cat = categorias.find((c) => c.id === i.categoriaId);
-            return { categoriaId: i.categoriaId, cantidad: i.cantidad, precioUnitario: cat?.precio ?? 0 };
+            const precio = Number(cat?.precio ?? 0);
+            return { tipoItem: 'BOLETO', categoriaId: i.categoriaId, cantidad: i.cantidad, precioUnitario: precio, subtotal: precio * i.cantidad };
           }),
         },
       },
     });
 
-    // Crear PaymentIntent en Stripe
+    // Si es cortesía total (total=0), completar directamente sin Stripe
+    if (total === 0 && promoId) {
+      await prisma.codigoPromo.update({ where: { id: promoId }, data: { usosActuales: { increment: 1 } } });
+      return res.json({ clientSecret: null, ordenId: orden.id, publicKey, cortesia: true });
+    }
+
     const stripe = makeStripe(secretKey);
     const intent = await stripe.paymentIntents.create({
       amount: Math.round(total * 100),
@@ -128,6 +148,7 @@ export async function stripeWebhook(req: Request, res: Response) {
         evento: true,
         items: { include: { categoria: true } },
         empresa: { include: { config: true } },
+        codigoPromo: true,
       },
     });
     if (!orden || orden.estado !== 'PENDIENTE') return res.json({ received: true });
@@ -151,9 +172,12 @@ export async function stripeWebhook(req: Request, res: Response) {
     }
 
     await prisma.orden.update({ where: { id: orden.id }, data: { estado: 'PAGADA', mpPaymentId: intent.id } });
-    broadcastEvento(orden.eventoId, { stock: true });
+    if (orden.codigoPromoId) {
+      await prisma.codigoPromo.update({ where: { id: orden.codigoPromoId }, data: { usosActuales: { increment: 1 } } });
+    }
+    const categoriasAct = await prisma.categoria.findMany({ where: { eventoId: orden.eventoId }, select: { id: true, disponibles: true } });
+    broadcastEvento(orden.eventoId, { tipo: 'stock', categorias: categoriasAct });
 
-    // Enviar email
     const cfg = orden.empresa?.config;
     const smtpConfig = cfg?.smtpHost
       ? { host: cfg.smtpHost, port: cfg.smtpPort, user: cfg.smtpUser ?? undefined, pass: cfg.smtpPass ?? undefined, from: cfg.smtpFrom ?? undefined, fromNombre: cfg.smtpFromNombre ?? undefined }
@@ -161,21 +185,39 @@ export async function stripeWebhook(req: Request, res: Response) {
 
     const baseUrl = process.env.NEXTAUTH_URL || 'https://regioticket.iados.online';
 
+    // Enviar todos los boletos en un email
     if (orden.compradorEmail && boletos.length > 0) {
       try {
-        const pdf = await generarPDFBoleto({
-          uuid: boletos[0].id,
-          numero: boletos[0].numero,
-          compradorNombre: orden.compradorNombre || undefined,
-          evento: orden.evento.nombre,
-          lugar: orden.evento.lugar,
-          fechaEvento: formatFecha(orden.evento.fechaEvento),
-          descripcion: orden.evento.descripcion || undefined,
-          categoria: boletos[0].categoria.nombre,
-          canal: 'ONLINE',
-        });
-        await enviarBoleto({ to: orden.compradorEmail, nombre: orden.compradorNombre ?? 'Cliente', evento: orden.evento.nombre, pdfBuffer: pdf, boletoUUID: boletos[0].id, smtpConfig, baseUrl });
+        const pdfs: Array<{ buffer: Buffer; uuid: string; numero: number }> = [];
+        for (const b of boletos) {
+          const pdf = await generarPDFBoleto({
+            uuid: b.id, numero: b.numero,
+            compradorNombre: orden.compradorNombre || undefined,
+            evento: orden.evento.nombre, lugar: orden.evento.lugar,
+            fechaEvento: formatFecha(orden.evento.fechaEvento),
+            descripcion: orden.evento.descripcion || undefined,
+            categoria: b.categoria.nombre, canal: 'ONLINE',
+          });
+          pdfs.push({ buffer: pdf, uuid: b.id, numero: b.numero });
+        }
+        await enviarBoleto({ to: orden.compradorEmail, nombre: orden.compradorNombre ?? 'Cliente', evento: orden.evento.nombre, pdfs, smtpConfig, baseUrl });
       } catch (e) { console.error('[stripe/webhook] Email:', e); }
+    }
+
+    // WhatsApp
+    if (orden.compradorWhatsapp && boletos.length > 0) {
+      try {
+        const b = boletos[0];
+        const msg = `¡Hola ${orden.compradorNombre ?? ''}! 🎟️ Tu${boletos.length > 1 ? 's ' + boletos.length : ''} boleto${boletos.length > 1 ? 's' : ''} para *${orden.evento.nombre}* ${boletos.length > 1 ? 'están listos' : 'está listo'}.\n\nVe tu boleto aquí: ${baseUrl}/boleto/${b.id}\n\nPresenta el QR en la entrada. ¡Que lo disfrutes!`;
+        if (cfg?.waProvider === 'meta' && cfg.waToken && cfg.waPhoneId) {
+          const numero = orden.compradorWhatsapp.replace(/\D/g, '');
+          await fetch(`https://graph.facebook.com/v18.0/${cfg.waPhoneId}/messages`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${cfg.waToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messaging_product: 'whatsapp', to: numero, type: 'text', text: { body: msg } }),
+          });
+        }
+      } catch (e) { console.error('[stripe/webhook] WhatsApp:', e); }
     }
 
     res.json({ received: true });

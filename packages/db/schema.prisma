@@ -70,10 +70,11 @@ model Empresa {
   activo    Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  usuarios  Usuario[]
-  eventos   Evento[]
-  ordenes   Orden[]
-  config    ConfigEmpresa?
+  usuarios     Usuario[]
+  eventos      Evento[]
+  ordenes      Orden[]
+  config       ConfigEmpresa?
+  codigosPromo CodigoPromo[]
 }
 
 model ConfigEmpresa {
@@ -152,17 +153,19 @@ model Evento {
   estado        EstadoEvento @default(BORRADOR)
   ventaOnline   Boolean      @default(true)
   ventaTaquilla Boolean      @default(true)
+  aforoTotal    Int?
   organizadorId String
   organizador   Usuario      @relation(fields: [organizadorId], references: [id])
 
   empresaId String?
   empresa   Empresa? @relation(fields: [empresaId], references: [id])
 
-  categorias Categoria[]
-  ordenes    Orden[]
-  mapaVenue  MapaVenue?
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  categorias   Categoria[]
+  ordenes      Orden[]
+  mapaVenue    MapaVenue?
+  codigosPromo CodigoPromo[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   @@index([empresaId])
 }
@@ -218,6 +221,9 @@ model Orden {
   compradorTel       String?
   compradorWhatsapp  String?
   total              Decimal     @db.Decimal(10, 2)
+  descuento          Decimal?    @db.Decimal(10, 2)
+  codigoPromoId      String?
+  codigoPromo        CodigoPromo? @relation(fields: [codigoPromoId], references: [id])
   mpPaymentId        String?
   mpPreferenciaId    String?
   referenciaPago     String?
@@ -299,6 +305,28 @@ model MapaVenue {
   anchoM    Float    @default(20)
   altoM     Float    @default(15)
   updatedAt DateTime @updatedAt
+}
+
+// ─── CÓDIGOS PROMO ──────────────────────────────────────────────────────────
+
+model CodigoPromo {
+  id           String   @id @default(cuid())
+  codigo       String   @unique
+  tipo         String   // PORCENTAJE | FIJO | CORTESIA
+  valor        Decimal  @db.Decimal(10, 2)
+  maxUsos      Int?
+  usosActuales Int      @default(0)
+  activo       Boolean  @default(true)
+  eventoId     String?
+  evento       Evento?  @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  empresaId    String?
+  empresa      Empresa? @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  expiresAt    DateTime?
+  createdAt    DateTime @default(now())
+  ordenes      Orden[]
+
+  @@index([codigo])
+  @@index([empresaId])
 }
 
 model TokenReset {

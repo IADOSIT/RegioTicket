@@ -1,10 +1,15 @@
 // Controller del panel administrador: CRUD eventos, categorías, órdenes, usuarios, dashboard SSE
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
-import { prisma, slugify } from '../utils/helpers';
-import { addSSEClient, setupSSEResponse } from '../services/sse';
+import Stripe from 'stripe';
+import { prisma, slugify, formatFecha, getSystemSmtpConfig } from '../utils/helpers';
+import { addSSEClient, setupSSEResponse, broadcastEvento } from '../services/sse';
 import { createObjectCsvStringifier } from 'csv-writer';
 import * as QRCodeLib from 'qrcode';
+import { generarPDFBoleto } from '../services/pdf';
+import { enviarBoleto } from '../services/mailer';
+
+function makeStripe(key: string) { return new (Stripe as any)(key); }
 
 // Scope helper — SUPER_ADMIN ve todo, los demás solo su empresa
 function ew(req: Request) {
@@ -215,32 +220,49 @@ async function calcularMetricas(eventoId: string) {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
 
-  const [ordenesHoy, ordenesTotal, categorias, ultimasOrdenes] = await Promise.all([
-    prisma.orden.findMany({ where: { eventoId, estado: 'PAGADA', createdAt: { gte: hoy } } }),
-    prisma.orden.findMany({ where: { eventoId, estado: 'PAGADA' } }),
+  const [ordenesHoy, ordenesTotal, categorias, ultimasOrdenes, byCanal, byHora, boletosUsados] = await Promise.all([
+    prisma.orden.aggregate({ where: { eventoId, estado: 'PAGADA', createdAt: { gte: hoy } }, _sum: { total: true }, _count: { id: true } }),
+    prisma.orden.aggregate({ where: { eventoId, estado: 'PAGADA' }, _sum: { total: true }, _count: { id: true } }),
     prisma.categoria.findMany({ where: { eventoId } }),
     prisma.orden.findMany({
       where: { eventoId },
       include: { items: { include: { categoria: true } } },
       orderBy: { createdAt: 'desc' },
-      take: 20,
+      take: 30,
     }),
+    prisma.orden.groupBy({ by: ['canal'], where: { eventoId, estado: 'PAGADA' }, _sum: { total: true }, _count: { id: true } }),
+    prisma.$queryRaw<Array<{ hora: number; ingresos: number; count: bigint }>>`
+      SELECT EXTRACT(HOUR FROM "createdAt") AS hora, SUM(total)::float AS ingresos, COUNT(*)::bigint AS count
+      FROM "Orden"
+      WHERE "eventoId" = ${eventoId} AND estado = 'PAGADA' AND "createdAt" >= NOW() - INTERVAL '24 hours'
+      GROUP BY hora ORDER BY hora ASC
+    `,
+    prisma.boleto.count({ where: { orden: { eventoId }, estado: 'USADO' } }),
   ]);
 
+  const totalBoletos = categorias.reduce((a, c) => a + c.totalBoletos, 0);
+  const vendidosTotal = categorias.reduce((a, c) => a + (c.totalBoletos - c.disponibles), 0);
+
   return {
-    vendidosHoy: ordenesHoy.length,
-    ingresosDia: ordenesHoy.reduce((a, o) => a + Number(o.total), 0),
-    ingresosTotal: ordenesTotal.reduce((a, o) => a + Number(o.total), 0),
-    disponiblesPorCategoria: categorias.map((c) => ({ id: c.id, nombre: c.nombre, disponibles: c.disponibles, total: c.totalBoletos })),
+    vendidosHoy: ordenesHoy._count.id,
+    ingresosDia: Number(ordenesHoy._sum.total ?? 0),
+    ingresosTotal: Number(ordenesTotal._sum.total ?? 0),
+    ordenesTotal: ordenesTotal._count.id,
+    boletosUsados,
+    vendidosTotal,
+    totalBoletos,
+    ocupacion: totalBoletos > 0 ? Math.round((vendidosTotal / totalBoletos) * 100) : 0,
+    disponiblesPorCategoria: categorias.map((c) => ({
+      id: c.id, nombre: c.nombre, disponibles: c.disponibles,
+      total: c.totalBoletos, vendidos: c.totalBoletos - c.disponibles,
+      precio: Number(c.precio),
+    })),
+    byCanal: byCanal.map((c) => ({ canal: c.canal, ingresos: Number(c._sum.total ?? 0), ordenes: c._count.id })),
+    ventasPorHora: byHora.map((h) => ({ hora: Number(h.hora), ingresos: Number(h.ingresos), count: Number(h.count) })),
     ultimasOrdenes: ultimasOrdenes.map((o) => ({
-      id: o.id,
-      compradorNombre: o.compradorNombre,
-      canal: o.canal,
-      formaPago: o.formaPago,
-      estado: o.estado,
-      total: Number(o.total),
-      createdAt: o.createdAt.toISOString(),
-      categoria: o.items[0]?.categoria?.nombre,
+      id: o.id, compradorNombre: o.compradorNombre, canal: o.canal,
+      formaPago: o.formaPago, estado: o.estado, total: Number(o.total),
+      createdAt: o.createdAt.toISOString(), categoria: o.items[0]?.categoria?.nombre,
     })),
   };
 }
@@ -251,12 +273,25 @@ export async function reembolsarOrden(req: Request, res: Response) {
   try {
     const orden = await prisma.orden.findUnique({
       where: { id: req.params.id, ...ew(req) },
-      include: { boletos: { include: { categoria: true } } },
+      include: { boletos: { include: { categoria: true } }, empresa: { include: { config: true } } },
     });
     if (!orden) return res.status(404).json({ error: 'Orden no encontrada' });
     if (orden.estado !== 'PAGADA') return res.status(400).json({ error: 'Solo se pueden reembolsar órdenes pagadas' });
 
-    // Agrupar boletos por categoría para restaurar stock
+    // Reembolso real en Stripe si aplica
+    if (orden.formaPago === 'TARJETA' && orden.referenciaPago) {
+      const stripeKey = orden.empresa?.config?.stripeSecretKey;
+      if (stripeKey) {
+        try {
+          const stripe = makeStripe(stripeKey);
+          await stripe.refunds.create({ payment_intent: orden.referenciaPago });
+        } catch (e: any) {
+          console.error('[reembolso] Stripe:', e.message);
+          return res.status(502).json({ error: `Error en Stripe: ${e.message}` });
+        }
+      }
+    }
+
     const stockPorCategoria: Record<string, number> = {};
     for (const b of orden.boletos) {
       stockPorCategoria[b.categoriaId] = (stockPorCategoria[b.categoriaId] ?? 0) + 1;
@@ -272,6 +307,183 @@ export async function reembolsarOrden(req: Request, res: Response) {
 
     res.json({ ok: true });
   } catch { res.status(500).json({ error: 'Error procesando reembolso' }); }
+}
+
+// ──────────────────── CANCELAR EVENTO ────────────────────
+
+export async function cancelarEvento(req: Request, res: Response) {
+  try {
+    const evento = await prisma.evento.findUnique({
+      where: { id: req.params.id, ...ew(req) },
+      include: {
+        ordenes: {
+          where: { estado: 'PAGADA' },
+          include: { boletos: true, empresa: { include: { config: true } } },
+        },
+        empresa: { include: { config: true } },
+      },
+    });
+    if (!evento) return res.status(404).json({ error: 'Evento no encontrado' });
+
+    const smtpConfig = evento.empresa?.config?.smtpHost
+      ? { host: evento.empresa.config.smtpHost, port: evento.empresa.config.smtpPort, user: evento.empresa.config.smtpUser ?? undefined, pass: evento.empresa.config.smtpPass ?? undefined, from: evento.empresa.config.smtpFrom ?? undefined, fromNombre: evento.empresa.config.smtpFromNombre ?? undefined }
+      : await getSystemSmtpConfig();
+
+    const baseUrl = process.env.NEXTAUTH_URL || 'https://regioticket.iados.online';
+
+    // Cancelar todos los boletos activos
+    await prisma.boleto.updateMany({
+      where: { orden: { eventoId: evento.id }, estado: 'VALIDO' },
+      data: { estado: 'CANCELADO' },
+    });
+    await prisma.orden.updateMany({
+      where: { eventoId: evento.id, estado: 'PAGADA' },
+      data: { estado: 'REEMBOLSADA' },
+    });
+    await prisma.evento.update({ where: { id: evento.id }, data: { estado: 'FINALIZADO', ventaOnline: false, ventaTaquilla: false } });
+
+    broadcastEvento(evento.id, { tipo: 'cancelado' });
+
+    // Notificar compradores (async, no bloquea la respuesta)
+    setImmediate(async () => {
+      for (const orden of evento.ordenes) {
+        if (!orden.compradorEmail) continue;
+        try {
+          const transporter = await import('../services/mailer');
+          // Reutilizar enviarBoleto con PDF vacío como fallback - simplificado a email directo
+          await import('nodemailer').then(async (nm) => {
+            const cfg = smtpConfig;
+            const host = cfg?.host || process.env.SMTP_HOST || 'smtp.gmail.com';
+            const port = cfg?.port || parseInt(process.env.SMTP_PORT || '587');
+            const tr = nm.default.createTransport({ host, port, secure: port === 465, auth: { user: cfg?.user || process.env.SMTP_USER, pass: cfg?.pass || process.env.SMTP_PASS } });
+            const from = cfg?.from || process.env.SMTP_USER || 'noreply@regioticket.mx';
+            const fromNombre = cfg?.fromNombre || 'RegioTicket';
+            await tr.sendMail({
+              from: `"${fromNombre}" <${from}>`,
+              to: orden.compradorEmail!,
+              subject: `Evento cancelado: ${evento.nombre}`,
+              html: `<div style="font-family:sans-serif;max-width:560px;margin:auto;padding:32px;"><h2>Evento cancelado</h2><p>Hola, lamentamos informarte que el evento <strong>${evento.nombre}</strong> ha sido cancelado.</p><p>Tus boletos han sido invalidados. Si realizaste un pago en línea, el reembolso se procesará próximamente.</p><p>Gracias por tu comprensión.</p></div>`,
+            });
+          });
+        } catch (e) { console.error('[cancelar] Email:', e); }
+      }
+    });
+
+    res.json({ ok: true, ordenesAfectadas: evento.ordenes.length });
+  } catch (e: any) {
+    console.error('[cancelar]', e.message);
+    res.status(500).json({ error: 'Error cancelando evento' });
+  }
+}
+
+// ──────────────────── DASHBOARD GLOBAL ────────────────────
+
+export async function dashboardGlobal(_req: Request, res: Response) {
+  try {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const [
+      ingresosHoy, ingresosTotal, boletosHoy, boletosTotal,
+      eventosActivos, ordenesRecientes, byEmpresa, byDia,
+    ] = await Promise.all([
+      prisma.orden.aggregate({ where: { estado: 'PAGADA', createdAt: { gte: hoy } }, _sum: { total: true } }),
+      prisma.orden.aggregate({ where: { estado: 'PAGADA' }, _sum: { total: true } }),
+      prisma.boleto.count({ where: { estado: 'VALIDO', createdAt: { gte: hoy } } }),
+      prisma.boleto.count({ where: { estado: { in: ['VALIDO', 'USADO'] } } }),
+      prisma.evento.count({ where: { estado: 'ACTIVO' } }),
+      prisma.orden.findMany({
+        where: { estado: 'PAGADA' },
+        include: { evento: { select: { nombre: true } }, empresa: { select: { nombre: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 30,
+      }),
+      prisma.orden.groupBy({
+        by: ['empresaId'],
+        where: { estado: 'PAGADA' },
+        _sum: { total: true },
+        _count: { id: true },
+      }),
+      // Ventas por día — últimos 30 días
+      prisma.$queryRaw<Array<{ dia: string; ingresos: number; count: bigint }>>`
+        SELECT DATE("createdAt") as dia, SUM(total)::float as ingresos, COUNT(*)::bigint as count
+        FROM "Orden"
+        WHERE estado = 'PAGADA' AND "createdAt" >= NOW() - INTERVAL '30 days'
+        GROUP BY DATE("createdAt")
+        ORDER BY dia ASC
+      `,
+    ]);
+
+    // Enriquecer byEmpresa con nombres
+    const empresas = await prisma.empresa.findMany({ select: { id: true, nombre: true } });
+    const byEmpresaEnriquecido = byEmpresa.map((e) => ({
+      empresaId: e.empresaId,
+      nombre: empresas.find((em) => em.id === e.empresaId)?.nombre ?? 'Sin empresa',
+      ingresos: Number(e._sum.total ?? 0),
+      ordenes: e._count.id,
+    })).sort((a, b) => b.ingresos - a.ingresos);
+
+    res.json({
+      ingresosHoy: Number(ingresosHoy._sum.total ?? 0),
+      ingresosTotal: Number(ingresosTotal._sum.total ?? 0),
+      boletosHoy,
+      boletosTotal,
+      eventosActivos,
+      ordenesRecientes: ordenesRecientes.map((o) => ({
+        id: o.id, compradorNombre: o.compradorNombre, canal: o.canal, formaPago: o.formaPago,
+        estado: o.estado, total: Number(o.total), createdAt: o.createdAt.toISOString(),
+        eventoNombre: o.evento.nombre, empresaNombre: o.empresa?.nombre,
+      })),
+      byEmpresa: byEmpresaEnriquecido,
+      ventasPorDia: byDia.map((d) => ({ dia: String(d.dia).slice(0, 10), ingresos: Number(d.ingresos), count: Number(d.count) })),
+    });
+  } catch (e: any) {
+    console.error('[dashboard-global]', e.message);
+    res.status(500).json({ error: 'Error obteniendo dashboard' });
+  }
+}
+
+// ──────────────────── CHECK-IN EN TIEMPO REAL ────────────────────
+
+export async function checkInStream(req: Request, res: Response) {
+  const { eventoId } = req.params;
+  setupSSEResponse(res);
+  addSSEClient(res, `checkin:${eventoId}`);
+
+  try {
+    const [accesos, categorias, evento] = await Promise.all([
+      prisma.acceso.findMany({
+        where: { boleto: { orden: { eventoId } }, exitoso: true },
+        include: { boleto: { include: { categoria: true, orden: { select: { compradorNombre: true } } } } },
+        orderBy: { timestamp: 'desc' },
+        take: 50,
+      }),
+      prisma.categoria.findMany({ where: { eventoId }, select: { id: true, nombre: true, totalBoletos: true, disponibles: true } }),
+      prisma.evento.findUnique({ where: { id: eventoId }, select: { nombre: true, aforoTotal: true } }),
+    ]);
+
+    const boletosUsados = await prisma.boleto.count({ where: { orden: { eventoId }, estado: 'USADO' } });
+    const boletosValidos = await prisma.boleto.count({ where: { orden: { eventoId }, estado: 'VALIDO' } });
+
+    res.write(`data: ${JSON.stringify({
+      tipo: 'init',
+      evento: evento?.nombre,
+      aforoTotal: evento?.aforoTotal,
+      boletosUsados,
+      boletosValidos,
+      categorias,
+      accesos: accesos.map((a) => ({
+        id: a.id, timestamp: a.timestamp, boletoId: a.boletoId,
+        numero: a.boleto.numero, categoria: a.boleto.categoria.nombre,
+        compradorNombre: a.boleto.orden.compradorNombre,
+      })),
+    })}\n\n`);
+  } catch (e) { console.error('[checkin/sse]', e); }
+
+  const heartbeat = setInterval(() => {
+    try { res.write(': ping\n\n'); } catch { clearInterval(heartbeat); }
+  }, 25000);
+  res.on('close', () => clearInterval(heartbeat));
 }
 
 // ──────────────────── CONFIGURACIÓN SISTEMA ────────────────────

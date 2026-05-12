@@ -97,25 +97,27 @@ export async function webhookMercadoPago(req: Request, res: Response) {
 
       const baseUrl = process.env.NEXTAUTH_URL || 'https://regioticket.iados.online';
 
-      // Enviar email con PDF
+      // Enviar email con todos los PDFs
       if (orden.compradorEmail && boletos.length > 0) {
         try {
-          const b = boletos[0];
-          const cat = orden.items.find((i) => i.categoriaId === b.categoriaId)?.categoria;
-          const pdf = await generarPDFBoleto({
-            uuid: b.id, numero: b.numero,
-            compradorNombre: orden.compradorNombre ?? undefined,
-            compradorEmail: orden.compradorEmail ?? undefined,
-            compradorWhatsapp: orden.compradorWhatsapp ?? undefined,
-            evento: orden.evento.nombre, lugar: orden.evento.lugar,
-            fechaEvento: formatFecha(orden.evento.fechaEvento),
-            descripcion: orden.evento.descripcion ?? undefined,
-            categoria: cat?.nombre ?? '', canal: 'ONLINE',
-          });
+          const pdfs: Array<{ buffer: Buffer; uuid: string; numero: number }> = [];
+          for (const b of boletos) {
+            const cat = orden.items.find((i) => i.categoriaId === b.categoriaId)?.categoria;
+            const pdf = await generarPDFBoleto({
+              uuid: b.id, numero: b.numero,
+              compradorNombre: orden.compradorNombre ?? undefined,
+              compradorEmail: orden.compradorEmail ?? undefined,
+              compradorWhatsapp: orden.compradorWhatsapp ?? undefined,
+              evento: orden.evento.nombre, lugar: orden.evento.lugar,
+              fechaEvento: formatFecha(orden.evento.fechaEvento),
+              descripcion: orden.evento.descripcion ?? undefined,
+              categoria: cat?.nombre ?? '', canal: 'ONLINE',
+            });
+            pdfs.push({ buffer: pdf, uuid: b.id, numero: b.numero });
+          }
           await enviarBoleto({
             to: orden.compradorEmail, nombre: orden.compradorNombre ?? 'Cliente',
-            evento: orden.evento.nombre, pdfBuffer: pdf, boletoUUID: b.id,
-            smtpConfig, baseUrl,
+            evento: orden.evento.nombre, pdfs, smtpConfig, baseUrl,
           });
         } catch (e) { console.error('[webhook] Email:', e); }
       }

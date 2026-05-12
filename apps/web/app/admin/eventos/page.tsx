@@ -11,7 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { formatFechaCorta } from '@/lib/utils';
 import { ImageUploadField } from '@/components/ImageUploadField';
-import { PlusIcon, PencilIcon, TrashIcon, FolderIcon, MapIcon, QrCodeIcon, DownloadIcon, XIcon } from 'lucide-react';
+import { PlusIcon, PencilIcon, TrashIcon, FolderIcon, MapIcon, QrCodeIcon, DownloadIcon, XIcon, BanIcon } from 'lucide-react';
 
 export default function EventosAdminPage() {
   const { data: session } = useSession();
@@ -44,6 +44,15 @@ export default function EventosAdminPage() {
     if (!confirm('¿Eliminar este evento?')) return;
     await api.admin.eventos.delete(id, token);
     cargar();
+  }
+
+  async function cancelar(id: string, nombre: string) {
+    if (!confirm(`¿Cancelar el evento "${nombre}"?\n\nSe invalidarán todos los boletos activos y se notificará a los compradores. Esta acción no se puede deshacer.`)) return;
+    try {
+      const r = await api.admin.cancelarEvento(id, token);
+      alert(`Evento cancelado. ${r.ordenesAfectadas} órdenes afectadas.`);
+      cargar();
+    } catch (e: any) { alert(e.message); }
   }
 
   async function verQR(ev: any) {
@@ -97,6 +106,9 @@ export default function EventosAdminPage() {
                   <QrCodeIcon size={14} className="mr-1" />{qrLoading === ev.id ? '…' : 'QR'}
                 </Button>
                 <Button variant="outline" size="icon" onClick={() => abrirModal(ev)}><PencilIcon size={14} /></Button>
+                {ev.estado !== 'FINALIZADO' && (
+                  <Button variant="outline" size="icon" onClick={() => cancelar(ev.id, ev.nombre)} title="Cancelar evento" className="text-orange-600 border-orange-200 hover:bg-orange-50"><BanIcon size={14} /></Button>
+                )}
                 <Button variant="destructive" size="icon" onClick={() => eliminar(ev.id)}><TrashIcon size={14} /></Button>
               </div>
             </CardContent>

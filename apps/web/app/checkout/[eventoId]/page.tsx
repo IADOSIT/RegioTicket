@@ -71,6 +71,10 @@ export default function CheckoutPage() {
   const [stripeState, setStripeState] = useState<{ clientSecret: string; stripePromise: any } | null>(null);
   const [pagado, setPagado] = useState(false);
   const timerRef = useRef<any>(null);
+  const [codigoInput, setCodigoInput] = useState('');
+  const [promo, setPromo] = useState<{ promoId: string; descuento: number; totalFinal: number; codigo: string } | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState('');
 
   useEffect(() => {
     api.eventos.get(eventoId as string)
@@ -108,34 +112,40 @@ export default function CheckoutPage() {
     });
   }
 
-  function getTotal() {
+  function getSubtotal() {
     return seleccion.reduce((acc, s) => acc + (getCat(s.categoriaId)?.precio ?? 0) * s.cantidad, 0);
   }
+  function getTotal() { return promo ? promo.totalFinal : getSubtotal(); }
+
+  async function aplicarPromo() {
+    if (!codigoInput.trim()) return;
+    setPromoLoading(true);
+    setPromoError('');
+    try {
+      const endpoint = evento?.stripePublicKey ? api.stripe.validarPromo : api.ordenes.validarPromo;
+      const r = await endpoint({ codigo: codigoInput.trim(), eventoId, subtotal: getSubtotal() });
+      setPromo({ promoId: r.promoId, descuento: r.descuento, totalFinal: r.totalFinal, codigo: codigoInput.trim().toUpperCase() });
+    } catch (e: any) { setPromoError(e.message); }
+    setPromoLoading(false);
+  }
+
+  function quitarPromo() { setPromo(null); setCodigoInput(''); setPromoError(''); }
 
   async function handlePagar() {
     setLoading(true);
     setError('');
     try {
+      const base = {
+        eventoId, items: seleccion,
+        compradorNombre: comprador.nombre, compradorEmail: comprador.email,
+        compradorTel: comprador.tel, compradorWhatsapp: comprador.whatsapp,
+        codigoPromo: promo?.codigo,
+      };
       if (metodoPago === 'stripe') {
-        const { clientSecret, publicKey } = await api.stripe.intent({
-          eventoId,
-          items: seleccion,
-          compradorNombre: comprador.nombre,
-          compradorEmail: comprador.email,
-          compradorTel: comprador.tel,
-          compradorWhatsapp: comprador.whatsapp,
-        });
-        const stripePromise = loadStripe(publicKey);
-        setStripeState({ clientSecret, stripePromise });
+        const { clientSecret, publicKey } = await api.stripe.intent(base);
+        setStripeState({ clientSecret, stripePromise: loadStripe(publicKey) });
       } else {
-        const { init_point } = await api.ordenes.crear({
-          eventoId,
-          items: seleccion,
-          compradorNombre: comprador.nombre,
-          compradorEmail: comprador.email,
-          compradorTel: comprador.tel,
-          compradorWhatsapp: comprador.whatsapp,
-        });
+        const { init_point } = await api.ordenes.crear(base);
         window.location.href = init_point;
       }
     } catch (e: any) {
@@ -267,10 +277,37 @@ export default function CheckoutPage() {
                   </div>
                 );
               })}
+              {promo && (
+                <div className="flex justify-between text-sm text-green-700">
+                  <span>Descuento ({promo.codigo})</span>
+                  <span>−{formatMXN(promo.descuento)}</span>
+                </div>
+              )}
               <div className="border-t border-gray-100 pt-2 flex justify-between font-bold">
                 <span>Total</span><span className="text-green-600 text-xl">{formatMXN(getTotal())}</span>
               </div>
             </div>
+
+            {/* Código promo */}
+            {!stripeState && (
+              <div className="border border-gray-200 rounded-xl p-4">
+                <p className="text-sm font-medium text-gray-700 mb-2">Código promocional</p>
+                {promo ? (
+                  <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                    <span className="text-sm font-medium text-green-700">✓ {promo.codigo} — −{formatMXN(promo.descuento)}</span>
+                    <button onClick={quitarPromo} className="text-xs text-gray-400 hover:text-red-500 ml-3">Quitar</button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input placeholder="PROMO2026" value={codigoInput} onChange={(e) => setCodigoInput(e.target.value.toUpperCase())} className="flex-1" />
+                    <Button variant="outline" onClick={aplicarPromo} disabled={promoLoading || !codigoInput.trim()}>
+                      {promoLoading ? '…' : 'Aplicar'}
+                    </Button>
+                  </div>
+                )}
+                {promoError && <p className="text-xs text-red-500 mt-1">{promoError}</p>}
+              </div>
+            )}
 
             {/* Selector de método de pago */}
             {tieneStripe && tieneMP && !stripeState && (
