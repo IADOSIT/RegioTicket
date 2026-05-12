@@ -47,6 +47,8 @@ enum FormaPago {
   EFECTIVO
   TARJETA
   CORTESIA
+  OXXO
+  SPEI
 }
 
 enum TipoItem {
