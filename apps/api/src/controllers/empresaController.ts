@@ -71,7 +71,9 @@ export async function saveConfigEmpresa(req: Request, res: Response) {
       waProvider, waToken, waPhoneId, waFrom,
       ventanaAntesHoras, ventanaDespuesHoras,
       // Apariencia
-      colorPrimario, descripcionCorta, heroTexto, bannerUrl,
+      colorPrimario, colorNavbar, colorBoton, colorTextoBoton,
+      colorSecundario, colorHero, colorFondo, colorTexto,
+      descripcionCorta, heroTexto, bannerUrl,
       facebook, instagram, tiktok, emailContacto, telefonoContacto,
       // Stripe
       stripePublicKey, stripeSecretKey, stripeWebhookSecret,
@@ -87,7 +89,9 @@ export async function saveConfigEmpresa(req: Request, res: Response) {
       waProvider, waPhoneId, waFrom,
       ventanaAntesHoras: ventanaAntesHoras ? Number(ventanaAntesHoras) : undefined,
       ventanaDespuesHoras: ventanaDespuesHoras ? Number(ventanaDespuesHoras) : undefined,
-      colorPrimario, descripcionCorta, heroTexto, bannerUrl,
+      colorPrimario, colorNavbar, colorBoton, colorTextoBoton,
+      colorSecundario, colorHero, colorFondo, colorTexto,
+      descripcionCorta, heroTexto, bannerUrl,
       facebook, instagram, tiktok, emailContacto, telefonoContacto,
       stripePublicKey,
       oxxoActivo: oxxoActivo === true || oxxoActivo === 'true',

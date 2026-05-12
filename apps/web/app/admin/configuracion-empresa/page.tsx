@@ -11,6 +11,7 @@ import { api } from '@/lib/api';
 import {
   SaveIcon, CheckCircleIcon, MailIcon, MessageCircleIcon,
   ClockIcon, PaletteIcon, GlobeIcon, ExternalLinkIcon, CreditCardIcon,
+  TicketIcon, SearchIcon,
 } from 'lucide-react';
 import { ImageUploadField } from '@/components/ImageUploadField';
 
@@ -29,7 +30,10 @@ function ConfigEmpresaForm() {
     smtpFrom: '', smtpFromNombre: '',
     waProvider: 'link', waToken: '', waPhoneId: '', waFrom: '',
     ventanaAntesHoras: 4, ventanaDespuesHoras: 2,
-    colorPrimario: '#16a34a', descripcionCorta: '', heroTexto: '',
+    colorPrimario: '#16a34a', colorNavbar: '', colorBoton: '',
+    colorTextoBoton: '#ffffff', colorSecundario: '', colorHero: '',
+    colorFondo: '#f8fafc', colorTexto: '#0f172a',
+    descripcionCorta: '', heroTexto: '',
     bannerUrl: '', facebook: '', instagram: '', tiktok: '',
     emailContacto: '', telefonoContacto: '',
     stripePublicKey: '', stripeSecretKey: '', stripeWebhookSecret: '',
@@ -92,8 +96,37 @@ function ConfigEmpresaForm() {
 
   const subdomainUrl = slug ? `https://${slug}.${BASE_DOMAIN}` : null;
 
+  // Helpers para el preview
+  const pc = (k: string, fallback: string) => form[k] || fallback;
+  const navbarColor = pc('colorNavbar', pc('colorPrimario', '#16a34a'));
+  const botonColor = pc('colorBoton', pc('colorPrimario', '#16a34a'));
+  const textoBoton = pc('colorTextoBoton', '#ffffff');
+  const heroColor = pc('colorHero', pc('colorPrimario', '#16a34a'));
+  const fondoColor = pc('colorFondo', '#f8fafc');
+  const secundario = pc('colorSecundario', pc('colorPrimario', '#16a34a'));
+
+  const ColorPicker = ({ label, field, fallback }: { label: string; field: string; fallback: string }) => (
+    <div className="space-y-1">
+      <Label className="text-xs text-gray-600">{label}</Label>
+      <div className="flex gap-2 items-center">
+        <input
+          type="color"
+          value={form[field] || fallback}
+          onChange={(e) => set(field, e.target.value)}
+          className="h-9 w-12 rounded border border-gray-200 cursor-pointer p-0.5 shrink-0"
+        />
+        <Input
+          value={form[field] || ''}
+          onChange={(e) => set(field, e.target.value)}
+          placeholder={fallback}
+          className="flex-1 text-xs h-9"
+        />
+      </div>
+    </div>
+  );
+
   return (
-    <div className="p-4 md:p-6 max-w-2xl">
+    <div className="p-4 md:p-6 max-w-6xl">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Configuración de empresa</h1>
@@ -111,38 +144,116 @@ function ConfigEmpresaForm() {
         </Button>
       </div>
 
-      {/* Apariencia del subdominio */}
-      <Section title="Apariencia del subdominio" icon={PaletteIcon}>
-        {subdomainUrl && (
-          <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-xs text-green-800 flex items-center justify-between">
-            <span>Subdominio activo: <strong>{subdomainUrl}</strong></span>
-            <a href={subdomainUrl} target="_blank" rel="noopener noreferrer" className="underline ml-2">Ver →</a>
+      {/* Apariencia del subdominio — layout de 2 columnas con preview */}
+      <Card className="mb-4">
+        <CardContent className="p-5 md:p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+              <PaletteIcon size={16} className="text-green-600" />
+            </div>
+            <h3 className="font-semibold text-gray-800">Apariencia del subdominio</h3>
           </div>
-        )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <Label htmlFor="colorPrimario">Color primario</Label>
-            <div className="flex gap-2 items-center">
-              <input
-                type="color"
-                id="colorPrimario"
-                value={form.colorPrimario || '#16a34a'}
-                onChange={(e) => set('colorPrimario', e.target.value)}
-                className="h-10 w-14 rounded border border-gray-200 cursor-pointer p-0.5"
-              />
-              <Input
-                value={form.colorPrimario || '#16a34a'}
-                onChange={(e) => set('colorPrimario', e.target.value)}
-                placeholder="#16a34a"
-                className="flex-1"
-              />
+
+          {subdomainUrl && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-xs text-green-800 flex items-center justify-between">
+              <span>Subdominio activo: <strong>{subdomainUrl}</strong></span>
+              <a href={subdomainUrl} target="_blank" rel="noopener noreferrer" className="underline ml-2">Ver →</a>
+            </div>
+          )}
+
+          <div className="flex flex-col xl:flex-row gap-6">
+            {/* Columna izquierda: controles */}
+            <div className="flex-1 space-y-5">
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Paleta de colores</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <ColorPicker label="Color primario (base)" field="colorPrimario" fallback="#16a34a" />
+                  <ColorPicker label="Navbar / Header" field="colorNavbar" fallback={pc('colorPrimario', '#16a34a')} />
+                  <ColorPicker label="Botones / CTAs" field="colorBoton" fallback={pc('colorPrimario', '#16a34a')} />
+                  <ColorPicker label="Texto en botones" field="colorTextoBoton" fallback="#ffffff" />
+                  <ColorPicker label="Color secundario / enlaces" field="colorSecundario" fallback={pc('colorPrimario', '#16a34a')} />
+                  <ColorPicker label="Hero / portada" field="colorHero" fallback={pc('colorPrimario', '#16a34a')} />
+                  <ColorPicker label="Fondo de página" field="colorFondo" fallback="#f8fafc" />
+                  <ColorPicker label="Texto principal" field="colorTexto" fallback="#0f172a" />
+                </div>
+              </div>
+
+              <div className="border-t border-gray-100 pt-4 space-y-3">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Contenido</p>
+                <Field label="Descripción corta" id="descripcionCorta" placeholder="La mejor boletería de NL" value={form.descripcionCorta} onChange={(v: string) => set('descripcionCorta', v)} hint="Aparece en el footer del subdominio" />
+                <Field label="Texto del hero (portada)" id="heroTexto" placeholder="Bienvenido a Palacio Vaquero" value={form.heroTexto} onChange={(v: string) => set('heroTexto', v)} hint="Título principal en la página de inicio del subdominio" />
+                <ImageUploadField label="Imagen de banner (hero)" id="bannerUrl" value={form.bannerUrl ?? ''} onChange={(v) => set('bannerUrl', v)} token={token} hint="Imagen de fondo del hero (1920×600px recomendado)" />
+              </div>
+            </div>
+
+            {/* Columna derecha: preview en tiempo real */}
+            <div className="xl:w-80 xl:sticky xl:top-4 xl:self-start shrink-0">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Vista previa</p>
+              <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm text-xs" style={{ backgroundColor: fondoColor }}>
+                {/* Navbar mock */}
+                <div className="flex items-center gap-2 px-3 py-2" style={{ backgroundColor: navbarColor }}>
+                  <div className="w-5 h-5 rounded bg-white/20 flex items-center justify-center">
+                    <div className="w-3 h-3 rounded-sm bg-white/60" />
+                  </div>
+                  <span className="text-white font-bold text-xs flex-1">
+                    {form.descripcionCorta ? (form.descripcionCorta.slice(0, 14) + (form.descripcionCorta.length > 14 ? '…' : '')) : 'Tu Empresa'}
+                  </span>
+                  <SearchIcon size={11} className="text-white/50" />
+                  <TicketIcon size={11} className="text-white/70" />
+                </div>
+                {/* Hero mock */}
+                <div className="px-3 py-5 text-center" style={{ backgroundColor: heroColor }}>
+                  <p className="font-extrabold text-white leading-tight mb-2" style={{ fontSize: '11px' }}>
+                    {form.heroTexto || 'Título del evento principal'}
+                  </p>
+                  <button
+                    className="text-xs font-bold px-3 py-1 rounded-lg"
+                    style={{ backgroundColor: botonColor, color: textoBoton, border: 'none' }}
+                  >
+                    Ver boletos →
+                  </button>
+                </div>
+                {/* Features strip */}
+                <div className="flex justify-around px-2 py-1.5" style={{ backgroundColor: pc('colorPrimario', '#16a34a') }}>
+                  {['Seguro', 'Rápido', 'Digital'].map((t) => (
+                    <span key={t} className="text-white font-medium" style={{ fontSize: '9px' }}>{t}</span>
+                  ))}
+                </div>
+                {/* Body mock */}
+                <div className="px-3 py-3" style={{ backgroundColor: fondoColor }}>
+                  <p className="font-bold mb-2" style={{ color: form.colorTexto || '#0f172a', fontSize: '10px' }}>Eventos disponibles</p>
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    {[1, 2].map((i) => (
+                      <div key={i} className="bg-white rounded-lg p-2 border border-gray-100 shadow-sm">
+                        <div className="w-full h-8 rounded mb-1.5" style={{ backgroundColor: `${secundario}22` }} />
+                        <div className="h-1.5 rounded bg-gray-200 mb-1 w-3/4" />
+                        <div className="h-1.5 rounded bg-gray-100 w-1/2 mb-1.5" />
+                        <div
+                          className="text-center py-0.5 rounded font-semibold"
+                          style={{ backgroundColor: botonColor, color: textoBoton, fontSize: '8px' }}
+                        >
+                          Comprar
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Contacto mock */}
+                  <div className="rounded-lg py-2 px-2 text-center" style={{ backgroundColor: `${secundario}15` }}>
+                    <span style={{ color: secundario, fontSize: '9px', fontWeight: 600 }}>Facebook · Instagram · Contacto</span>
+                  </div>
+                </div>
+                {/* Footer mock */}
+                <div className="px-3 py-2 text-center" style={{ backgroundColor: navbarColor }}>
+                  <span className="text-white/60" style={{ fontSize: '8px' }}>
+                    {form.descripcionCorta || 'Tu empresa · todos los derechos'}
+                  </span>
+                </div>
+              </div>
+              <p className="text-center text-gray-400 mt-2" style={{ fontSize: '10px' }}>El preview se actualiza en tiempo real</p>
             </div>
           </div>
-          <Field label="Descripción corta" id="descripcionCorta" placeholder="La mejor boletería de NL" value={form.descripcionCorta} onChange={(v: string) => set('descripcionCorta', v)} hint="Aparece en el footer del subdominio" />
-        </div>
-        <Field label="Texto del hero (portada)" id="heroTexto" placeholder="Bienvenido a Palacio Vaquero" value={form.heroTexto} onChange={(v: string) => set('heroTexto', v)} hint="Título principal en la página de inicio del subdominio" />
-        <ImageUploadField label="Imagen de banner (hero)" id="bannerUrl" value={form.bannerUrl ?? ''} onChange={(v) => set('bannerUrl', v)} token={token} hint="Imagen de fondo del hero (1920×600px recomendado)" />
-      </Section>
+        </CardContent>
+      </Card>
 
       {/* Redes sociales y contacto público */}
       <Section title="Redes sociales y contacto público" icon={GlobeIcon}>

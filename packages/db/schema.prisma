@@ -104,6 +104,13 @@ model ConfigEmpresa {
 
   // Apariencia del subdominio
   colorPrimario       String?
+  colorNavbar         String?
+  colorBoton          String?
+  colorTextoBoton     String?
+  colorSecundario     String?
+  colorHero           String?
+  colorFondo          String?
+  colorTexto          String?
   descripcionCorta    String?
   heroTexto           String?
   bannerUrl           String?

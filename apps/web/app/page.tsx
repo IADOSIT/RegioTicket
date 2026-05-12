@@ -39,14 +39,20 @@ export default async function HomePage() {
 
   const cfg = empresa?.config ?? {};
   const color = cfg.colorPrimario || '#16a34a';
-  const colorLight = `${color}20`;
+  const colorNavbar = cfg.colorNavbar || color;
+  const colorBoton = cfg.colorBoton || color;
+  const colorTextoBoton = cfg.colorTextoBoton || '#ffffff';
+  const colorHero = cfg.colorHero || color;
+  const colorFondo = cfg.colorFondo || '#f8fafc';
+  const colorSecundario = cfg.colorSecundario || color;
+  const colorLight = `${colorSecundario}20`;
   const empresaNombre = empresa?.nombre;
   const esSubdominio = !!empresaSlug && !!empresa;
 
   return (
     <>
-      <Header empresaNombre={esSubdominio ? empresaNombre : undefined} empresaLogo={empresa?.logo} color={esSubdominio ? color : undefined} />
-      <main className="bg-slate-50 min-h-screen">
+      <Header empresaNombre={esSubdominio ? empresaNombre : undefined} empresaLogo={empresa?.logo} color={esSubdominio ? colorNavbar : undefined} />
+      <main className="min-h-screen" style={{ backgroundColor: esSubdominio ? colorFondo : '#f8fafc' }}>
 
         {/* Hero */}
         {proximos.length > 0 && !cfg.bannerUrl && <HeroCarousel eventos={proximos} />}
@@ -66,6 +72,10 @@ export default async function HomePage() {
               {cfg.descripcionCorta && (
                 <p className="text-lg text-white/80 max-w-xl mx-auto">{cfg.descripcionCorta}</p>
               )}
+              <a href="#eventos" className="mt-6 inline-block font-bold px-8 py-3 rounded-xl transition-colors"
+                style={{ backgroundColor: colorBoton, color: colorTextoBoton }}>
+                Ver boletos →
+              </a>
             </div>
           </section>
         )}
@@ -87,7 +97,7 @@ export default async function HomePage() {
 
         {/* Hero empresa sin banner */}
         {esSubdominio && !cfg.bannerUrl && proximos.length === 0 && (
-          <section className="py-20 px-4" style={{ backgroundColor: color }}>
+          <section className="py-20 px-4" style={{ backgroundColor: colorHero }}>
             <div className="max-w-3xl mx-auto text-center">
               {empresa.logo && <img src={empresa.logo} alt={empresaNombre} className="h-16 mx-auto mb-6 object-contain" />}
               <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4">
@@ -96,6 +106,10 @@ export default async function HomePage() {
               {cfg.descripcionCorta && (
                 <p className="text-lg text-white/80 max-w-xl mx-auto">{cfg.descripcionCorta}</p>
               )}
+              <a href="#eventos" className="mt-6 inline-block font-bold px-8 py-3 rounded-xl transition-colors"
+                style={{ backgroundColor: colorBoton, color: colorTextoBoton }}>
+                Ver boletos →
+              </a>
             </div>
           </section>
         )}
@@ -160,7 +174,7 @@ export default async function HomePage() {
         {esSubdominio && (cfg.facebook || cfg.instagram || cfg.tiktok || cfg.emailContacto || cfg.telefonoContacto) && (
           <section className="py-12 px-4" style={{ backgroundColor: colorLight }}>
             <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-xl font-bold mb-6" style={{ color }}>Contáctanos</h2>
+              <h2 className="text-xl font-bold mb-6" style={{ color: colorSecundario }}>Contáctanos</h2>
               <div className="flex flex-wrap justify-center gap-4">
                 {cfg.telefonoContacto && (
                   <a href={`tel:${cfg.telefonoContacto}`} className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900">
@@ -173,17 +187,17 @@ export default async function HomePage() {
                   </a>
                 )}
                 {cfg.facebook && (
-                  <a href={cfg.facebook} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-medium" style={{ color }}>
+                  <a href={cfg.facebook} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-medium" style={{ color: colorSecundario }}>
                     <FacebookIcon size={16} />Facebook
                   </a>
                 )}
                 {cfg.instagram && (
-                  <a href={cfg.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-medium" style={{ color }}>
+                  <a href={cfg.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-medium" style={{ color: colorSecundario }}>
                     <InstagramIcon size={16} />Instagram
                   </a>
                 )}
                 {cfg.tiktok && (
-                  <a href={cfg.tiktok} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-medium" style={{ color }}>
+                  <a href={cfg.tiktok} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-medium" style={{ color: colorSecundario }}>
                     <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.85 4.85 0 01-1.02-.07z"/></svg>
                     TikTok
                   </a>
