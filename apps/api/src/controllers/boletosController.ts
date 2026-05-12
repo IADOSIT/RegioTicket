@@ -1,6 +1,6 @@
 // Controller de boletos: consulta, PDF, reenvío email, WhatsApp
 import { Request, Response } from 'express';
-import { prisma, formatFecha, generarWhatsAppLink } from '../utils/helpers';
+import { prisma, formatFecha, generarWhatsAppLink, getSystemSmtpConfig } from '../utils/helpers';
 import { generarPDFBoleto, generarTicketTermico } from '../services/pdf';
 import { enviarReenvio } from '../services/mailer';
 
@@ -81,12 +81,20 @@ export async function reenviarEmail(req: Request, res: Response) {
       categoria: boleto.categoria.nombre,
       canal: boleto.orden.canal,
     });
+    const empresaId = boleto.orden.evento.empresaId;
+    let smtpConfig;
+    if (empresaId) {
+      const cfg = await prisma.configEmpresa.findUnique({ where: { empresaId } });
+      if (cfg?.smtpHost) smtpConfig = { host: cfg.smtpHost, port: cfg.smtpPort, user: cfg.smtpUser ?? undefined, pass: cfg.smtpPass ?? undefined, from: cfg.smtpFrom ?? undefined, fromNombre: cfg.smtpFromNombre ?? undefined };
+    }
+    if (!smtpConfig) smtpConfig = await getSystemSmtpConfig();
     await enviarReenvio({
       to: email,
       nombre: boleto.orden.compradorNombre ?? 'Cliente',
       evento: boleto.orden.evento.nombre,
       pdfBuffer: pdf,
       boletoUUID: boleto.id,
+      smtpConfig,
     });
     res.json({ ok: true });
   } catch {

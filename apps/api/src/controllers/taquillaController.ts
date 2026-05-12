@@ -1,7 +1,7 @@
 // Controller de taquilla: venta presencial inmediata, scoped por empresa
 import { Request, Response } from 'express';
 import crypto from 'crypto';
-import { prisma, calcularTotal, siguienteNumeroBoleto, formatFecha } from '../utils/helpers';
+import { prisma, calcularTotal, siguienteNumeroBoleto, formatFecha, getSystemSmtpConfig } from '../utils/helpers';
 import { generarPDFBoleto } from '../services/pdf';
 import { enviarBoleto } from '../services/mailer';
 import { broadcastEvento } from '../services/sse';
@@ -109,7 +109,7 @@ export async function ventaTaquilla(req: Request, res: Response) {
       host: cfgEmpresa.smtpHost, port: cfgEmpresa.smtpPort,
       user: cfgEmpresa.smtpUser ?? undefined, pass: cfgEmpresa.smtpPass ?? undefined,
       from: cfgEmpresa.smtpFrom ?? undefined, fromNombre: cfgEmpresa.smtpFromNombre ?? undefined,
-    } : undefined;
+    } : await getSystemSmtpConfig();
 
     const baseUrl = process.env.NEXTAUTH_URL || 'https://regioticket.iados.online';
 

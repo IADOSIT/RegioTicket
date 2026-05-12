@@ -1,7 +1,7 @@
 // Controller webhook MercadoPago: confirma pago, crea boletos firmados y notifica
 import { Request, Response } from 'express';
 import crypto from 'crypto';
-import { prisma, siguienteNumeroBoleto, formatFecha } from '../utils/helpers';
+import { prisma, siguienteNumeroBoleto, formatFecha, getSystemSmtpConfig } from '../utils/helpers';
 import { generarPDFBoleto } from '../services/pdf';
 import { enviarBoleto } from '../services/mailer';
 import { broadcastEvento } from '../services/sse';
@@ -72,7 +72,7 @@ export async function webhookMercadoPago(req: Request, res: Response) {
       pass: cfgEmpresa.smtpPass ?? undefined,
       from: cfgEmpresa.smtpFrom ?? undefined,
       fromNombre: cfgEmpresa.smtpFromNombre ?? undefined,
-    } : undefined;
+    } : await getSystemSmtpConfig();
 
     if (pago.status === 'approved') {
       const boletos: { id: string; numero: number; categoriaId: string }[] = [];

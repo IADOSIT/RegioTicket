@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { prisma } from '../utils/helpers';
+import { prisma, getSystemSmtpConfig } from '../utils/helpers';
 import { enviarReset } from '../services/mailer';
 
 export async function login(req: Request, res: Response) {
@@ -51,7 +51,7 @@ export async function forgotPassword(req: Request, res: Response) {
       const baseUrl = process.env.NEXTAUTH_URL || 'https://regioticket.iados.online';
       const resetUrl = `${baseUrl}/admin/reset-password?token=${token}`;
 
-      // Load empresa SMTP config if available
+      // Load SMTP: empresa config → sistema config → env vars
       let smtpConfig;
       if (usuario.empresaId) {
         const cfg = await prisma.configEmpresa.findUnique({ where: { empresaId: usuario.empresaId } });
@@ -59,6 +59,7 @@ export async function forgotPassword(req: Request, res: Response) {
           smtpConfig = { host: cfg.smtpHost, port: cfg.smtpPort, user: cfg.smtpUser ?? undefined, pass: cfg.smtpPass ?? undefined, from: cfg.smtpFrom ?? undefined, fromNombre: cfg.smtpFromNombre ?? undefined };
         }
       }
+      if (!smtpConfig) smtpConfig = await getSystemSmtpConfig();
 
       await enviarReset({ to: usuario.email, nombre: usuario.nombre, resetUrl, smtpConfig }).catch(() => {});
     }
