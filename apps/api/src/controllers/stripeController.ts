@@ -140,7 +140,7 @@ export async function stripeWebhook(req: Request, res: Response) {
         const id = uuidv4();
         const firma = firmarBoleto(id);
         const boleto = await prisma.boleto.create({
-          data: { id, ordenId: orden.id, categoriaId: item.categoriaId, numero, qrData: `${id}|${firma}`, estado: 'VALIDO' },
+          data: { id, ordenId: orden.id, categoriaId: item.categoriaId!, numero, qrData: `${id}|${firma}`, estado: 'VALIDO' },
         });
         boletos.push({ ...boleto, categoria: item.categoria });
       }
@@ -148,7 +148,7 @@ export async function stripeWebhook(req: Request, res: Response) {
 
     // Actualizar stock
     for (const item of orden.items) {
-      await prisma.categoria.update({ where: { id: item.categoriaId }, data: { disponibles: { decrement: item.cantidad } } });
+      await prisma.categoria.update({ where: { id: item.categoriaId! }, data: { disponibles: { decrement: item.cantidad } } });
     }
 
     await prisma.orden.update({ where: { id: orden.id }, data: { estado: 'PAGADA', mpPaymentId: intent.id } });
