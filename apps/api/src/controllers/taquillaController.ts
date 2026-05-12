@@ -115,15 +115,18 @@ export async function ventaTaquilla(req: Request, res: Response) {
 
     if (comprador?.email && boletosCreados.length > 0) {
       try {
-        const b = boletosCreados[0];
-        const cat = categorias.find((c) => c.id === b.categoriaId)!;
-        const pdf = await generarPDFBoleto({
-          uuid: b.id, numero: b.numero, compradorNombre: comprador?.nombre,
-          compradorEmail: comprador?.email, compradorWhatsapp: comprador?.whatsapp,
-          evento: evento.nombre, lugar: evento.lugar, fechaEvento: formatFecha(evento.fechaEvento),
-          descripcion: evento.descripcion ?? undefined, categoria: cat.nombre, canal: 'TAQUILLA',
-        });
-        await enviarBoleto({ to: comprador.email, nombre: comprador?.nombre ?? 'Cliente', evento: evento.nombre, pdfBuffer: pdf, boletoUUID: b.id, smtpConfig, baseUrl });
+        const pdfs: Array<{ buffer: Buffer; uuid: string; numero: number }> = [];
+        for (const b of boletosCreados) {
+          const cat = categorias.find((c) => c.id === b.categoriaId)!;
+          const pdf = await generarPDFBoleto({
+            uuid: b.id, numero: b.numero, compradorNombre: comprador?.nombre,
+            compradorEmail: comprador?.email, compradorWhatsapp: comprador?.whatsapp,
+            evento: evento.nombre, lugar: evento.lugar, fechaEvento: formatFecha(evento.fechaEvento),
+            descripcion: evento.descripcion ?? undefined, categoria: cat.nombre, canal: 'TAQUILLA',
+          });
+          pdfs.push({ buffer: pdf, uuid: b.id, numero: b.numero });
+        }
+        await enviarBoleto({ to: comprador.email, nombre: comprador?.nombre ?? 'Cliente', evento: evento.nombre, pdfs, smtpConfig, baseUrl });
       } catch (e) { console.error('[taquilla] Email:', e); }
     }
 
