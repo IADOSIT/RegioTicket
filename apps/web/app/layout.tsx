@@ -8,12 +8,13 @@ export const metadata: Metadata = {
   keywords: 'boletos, eventos, Nuevo León, Monterrey, palenque, conciertos',
   icons: {
     icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
       { url: '/favicon-48.png', sizes: '48x48', type: 'image/png' },
       { url: '/favicon-96.png', sizes: '96x96', type: 'image/png' },
       { url: '/favicon-192.png', sizes: '192x192', type: 'image/png' },
     ],
     apple: { url: '/favicon-192.png', sizes: '192x192' },
-    shortcut: '/favicon-48.png',
+    shortcut: '/favicon.svg',
   },
 };
 

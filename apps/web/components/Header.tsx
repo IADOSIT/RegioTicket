@@ -21,9 +21,7 @@ export function Header({ empresaNombre, empresaLogo, color = '#0f172a' }: Header
           {empresaLogo ? (
             <img src={empresaLogo} alt={empresaNombre} className="h-9 w-auto rounded-xl object-contain bg-white/10 p-0.5" />
           ) : (
-            <div className="bg-white rounded-xl px-2 py-1">
-              <Image src="/logo.png" alt="RegioTicket" width={36} height={36} priority className="h-9 w-auto" />
-            </div>
+            <Image src="/logo.svg" alt="RegioTicket" width={36} height={36} priority className="h-9 w-auto rounded-lg" />
           )}
           <span className="text-white font-extrabold text-lg tracking-tight hidden sm:block">
             {empresaNombre || <><span>Regio</span><span className="text-green-400">Ticket</span></>}
