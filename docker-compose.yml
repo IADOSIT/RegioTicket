@@ -13,6 +13,8 @@ services:
     restart: unless-stopped
     ports:
       - "8089:80"
+    volumes:
+      - regioticket_uploads:/app/uploads:ro
     networks:
       - web_network
     dns:
@@ -49,6 +51,8 @@ services:
       dockerfile: apps/api/Dockerfile
     container_name: regioticket_api
     restart: unless-stopped
+    volumes:
+      - regioticket_uploads:/app/uploads
     environment:
       - NODE_ENV=production
       - PORT=4000
@@ -62,6 +66,8 @@ services:
       - SMTP_PORT=587
       - SMTP_USER=correo@gmail.com
       - SMTP_PASS=app_password_aqui
+      - API_PUBLIC_URL=https://regioticket.iados.online
+      - UPLOADS_PATH=/app/uploads
     networks:
       - web_network
     dns:
@@ -86,6 +92,8 @@ services:
 volumes:
   regioticket_redis_data:
     name: regioticket_redis_data
+  regioticket_uploads:
+    name: regioticket_uploads
 
 networks:
   web_network:

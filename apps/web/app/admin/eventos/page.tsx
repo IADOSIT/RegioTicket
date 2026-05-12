@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { formatFechaCorta } from '@/lib/utils';
+import { ImageUploadField } from '@/components/ImageUploadField';
 import { PlusIcon, PencilIcon, TrashIcon, FolderIcon, MapIcon, QrCodeIcon, DownloadIcon, XIcon } from 'lucide-react';
 
 export default function EventosAdminPage() {
@@ -17,7 +18,7 @@ export default function EventosAdminPage() {
   const [eventos, setEventos] = useState<any[]>([]);
   const [modal, setModal] = useState(false);
   const [editando, setEditando] = useState<any>(null);
-  const [form, setForm] = useState({ nombre: '', lugar: '', fechaEvento: '', descripcion: '', estado: 'BORRADOR', ventaOnline: true, ventaTaquilla: true });
+  const [form, setForm] = useState({ nombre: '', lugar: '', fechaEvento: '', descripcion: '', imagen: '', estado: 'BORRADOR', ventaOnline: true, ventaTaquilla: true });
   const [qrModal, setQrModal] = useState<{ qr: string; url: string; nombre: string } | null>(null);
   const [qrLoading, setQrLoading] = useState<string | null>(null);
   const token = (session?.user as any)?.apiToken;
@@ -27,7 +28,7 @@ export default function EventosAdminPage() {
 
   function abrirModal(ev?: any) {
     setEditando(ev ?? null);
-    setForm(ev ? { nombre: ev.nombre, lugar: ev.lugar, fechaEvento: ev.fechaEvento?.slice(0, 16) ?? '', descripcion: ev.descripcion ?? '', estado: ev.estado, ventaOnline: ev.ventaOnline, ventaTaquilla: ev.ventaTaquilla } : { nombre: '', lugar: '', fechaEvento: '', descripcion: '', estado: 'BORRADOR', ventaOnline: true, ventaTaquilla: true });
+    setForm(ev ? { nombre: ev.nombre, lugar: ev.lugar, fechaEvento: ev.fechaEvento?.slice(0, 16) ?? '', descripcion: ev.descripcion ?? '', imagen: ev.imagen ?? '', estado: ev.estado, ventaOnline: ev.ventaOnline, ventaTaquilla: ev.ventaTaquilla } : { nombre: '', lugar: '', fechaEvento: '', descripcion: '', imagen: '', estado: 'BORRADOR', ventaOnline: true, ventaTaquilla: true });
     setModal(true);
   }
 
@@ -119,6 +120,13 @@ export default function EventosAdminPage() {
                 <Input type={type} value={(form as any)[id]} onChange={(e) => setForm((p) => ({ ...p, [id]: e.target.value }))} />
               </div>
             ))}
+            <ImageUploadField
+              label="Imagen del evento"
+              value={form.imagen}
+              onChange={(url) => setForm((p) => ({ ...p, imagen: url }))}
+              token={token}
+              hint="Portada del evento (16:9 recomendado)"
+            />
             <div className="space-y-1">
               <Label>Estado</Label>
               <select className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={form.estado} onChange={(e) => setForm((p) => ({ ...p, estado: e.target.value }))}>

@@ -12,6 +12,7 @@ import {
   SaveIcon, CheckCircleIcon, MailIcon, MessageCircleIcon,
   ClockIcon, PaletteIcon, GlobeIcon, ExternalLinkIcon,
 } from 'lucide-react';
+import { ImageUploadField } from '@/components/ImageUploadField';
 
 const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'regioticket.iados.online';
 
@@ -137,7 +138,7 @@ function ConfigEmpresaForm() {
           <Field label="Descripción corta" id="descripcionCorta" placeholder="La mejor boletería de NL" value={form.descripcionCorta} onChange={(v: string) => set('descripcionCorta', v)} hint="Aparece en el footer del subdominio" />
         </div>
         <Field label="Texto del hero (portada)" id="heroTexto" placeholder="Bienvenido a Palacio Vaquero" value={form.heroTexto} onChange={(v: string) => set('heroTexto', v)} hint="Título principal en la página de inicio del subdominio" />
-        <Field label="URL de imagen de banner" id="bannerUrl" placeholder="https://..." value={form.bannerUrl} onChange={(v: string) => set('bannerUrl', v)} hint="Imagen de fondo del hero (1920×600px recomendado)" />
+        <ImageUploadField label="Imagen de banner (hero)" id="bannerUrl" value={form.bannerUrl ?? ''} onChange={(v) => set('bannerUrl', v)} token={token} hint="Imagen de fondo del hero (1920×600px recomendado)" />
       </Section>
 
       {/* Redes sociales y contacto público */}

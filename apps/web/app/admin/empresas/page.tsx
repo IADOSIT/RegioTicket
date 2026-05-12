@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { api } from '@/lib/api';
+import { ImageUploadField } from '@/components/ImageUploadField';
 import { PlusIcon, PencilIcon, BuildingIcon, UsersIcon, CalendarIcon, SettingsIcon, ExternalLinkIcon } from 'lucide-react';
 
 const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'regioticket.iados.online';
@@ -131,10 +132,13 @@ export default function EmpresasPage() {
                 <p className="text-xs text-green-600">→ https://{form.slug}.{BASE_DOMAIN}</p>
               )}
             </div>
-            <div className="space-y-1">
-              <Label>Logo URL (opcional)</Label>
-              <Input value={form.logo} onChange={(e) => setForm((p) => ({ ...p, logo: e.target.value }))} placeholder="https://..." />
-            </div>
+            <ImageUploadField
+              label="Logo (opcional)"
+              value={form.logo}
+              onChange={(url) => setForm((p) => ({ ...p, logo: url }))}
+              token={token}
+              hint="URL o sube una imagen (PNG/SVG recomendado)"
+            />
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={form.activo} onChange={(e) => setForm((p) => ({ ...p, activo: e.target.checked }))} />
               Empresa activa

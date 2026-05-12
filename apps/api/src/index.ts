@@ -13,7 +13,12 @@ import taquillaRouter from './routes/taquilla';
 import adminRouter from './routes/admin';
 import webhookRouter from './routes/webhook';
 import misBoletoRouter from './routes/misBoletos';
+import uploadRouter from './routes/upload';
 import { startExpirarOrdenes } from './jobs/expirarOrdenes';
+import { existsSync, mkdirSync } from 'fs';
+
+const UPLOADS_PATH = process.env.UPLOADS_PATH || '/app/uploads';
+if (!existsSync(UPLOADS_PATH)) mkdirSync(UPLOADS_PATH, { recursive: true });
 import { prisma } from './utils/helpers';
 
 const app = express();
@@ -37,6 +42,8 @@ app.use('/api/taquilla', taquillaRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/webhook', webhookRouter);
 app.use('/api/mis-boletos', misBoletoRouter);
+app.use('/api/admin/upload', uploadRouter);
+app.use('/uploads', express.static(UPLOADS_PATH));
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, ts: new Date() }));
 
