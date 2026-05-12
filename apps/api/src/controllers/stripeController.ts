@@ -11,8 +11,8 @@ function firmarBoleto(id: string) {
   return crypto.createHmac('sha256', process.env.QR_SECRET || 'rt-secret-key').update(id).digest('hex');
 }
 
-function getStripe(secretKey: string) {
-  return new Stripe(secretKey, { apiVersion: '2025-04-30.basil' as any });
+function makeStripe(secretKey: string) {
+  return new (Stripe as any)(secretKey);
 }
 
 export async function crearStripeIntent(req: Request, res: Response) {
@@ -40,7 +40,6 @@ export async function crearStripeIntent(req: Request, res: Response) {
       const cat = categorias.find((c) => c.id === i.categoriaId);
       return acc + (cat ? Number(cat.precio) * i.cantidad : 0);
     }, 0);
-
     if (total <= 0) return res.status(400).json({ error: 'Total inválido' });
 
     // Crear Orden PENDIENTE
@@ -67,7 +66,7 @@ export async function crearStripeIntent(req: Request, res: Response) {
     });
 
     // Crear PaymentIntent en Stripe
-    const stripe = getStripe(secretKey);
+    const stripe = makeStripe(secretKey);
     const intent = await stripe.paymentIntents.create({
       amount: Math.round(total * 100),
       currency: 'mxn',
@@ -75,7 +74,6 @@ export async function crearStripeIntent(req: Request, res: Response) {
       description: `${evento.nombre} — RegioTicket`,
     });
 
-    // Guardar el intentId en la orden
     await prisma.orden.update({ where: { id: orden.id }, data: { referenciaPago: intent.id } });
 
     res.json({ clientSecret: intent.client_secret, ordenId: orden.id, publicKey });
@@ -96,23 +94,19 @@ export async function stripeWebhook(req: Request, res: Response) {
     empresaId = payload?.data?.object?.metadata?.empresaId || '';
   } catch { /* ignore */ }
 
-  // Obtener webhook secret de la empresa o usar variable de entorno
   let webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
   if (empresaId) {
     const cfg = await prisma.configEmpresa.findUnique({ where: { empresaId } });
     if (cfg?.stripeWebhookSecret) webhookSecret = cfg.stripeWebhookSecret;
-    if (cfg?.stripeSecretKey) {
-      // Verificar con Stripe usando el secreto correcto
-    }
   }
 
-  let event: Stripe.Event;
+  let event: any;
   try {
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2025-04-30.basil' as any });
     if (webhookSecret && sig) {
+      const stripe = makeStripe(process.env.STRIPE_SECRET_KEY || '');
       event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
     } else {
-      event = JSON.parse(rawBody.toString()) as Stripe.Event;
+      event = JSON.parse(rawBody.toString());
     }
   } catch (e: any) {
     console.error('[stripe/webhook] Firma inválida:', e.message);
@@ -123,7 +117,7 @@ export async function stripeWebhook(req: Request, res: Response) {
     return res.json({ received: true });
   }
 
-  const intent = event.data.object as Stripe.PaymentIntent;
+  const intent = event.data.object;
   const ordenId = intent.metadata?.ordenId;
   if (!ordenId) return res.json({ received: true });
 
@@ -146,14 +140,7 @@ export async function stripeWebhook(req: Request, res: Response) {
         const id = uuidv4();
         const firma = firmarBoleto(id);
         const boleto = await prisma.boleto.create({
-          data: {
-            id,
-            ordenId: orden.id,
-            categoriaId: item.categoriaId,
-            numero,
-            qrData: `${id}|${firma}`,
-            estado: 'VALIDO',
-          },
+          data: { id, ordenId: orden.id, categoriaId: item.categoriaId, numero, qrData: `${id}|${firma}`, estado: 'VALIDO' },
         });
         boletos.push({ ...boleto, categoria: item.categoria });
       }
@@ -161,21 +148,13 @@ export async function stripeWebhook(req: Request, res: Response) {
 
     // Actualizar stock
     for (const item of orden.items) {
-      await prisma.categoria.update({
-        where: { id: item.categoriaId },
-        data: { disponibles: { decrement: item.cantidad } },
-      });
+      await prisma.categoria.update({ where: { id: item.categoriaId }, data: { disponibles: { decrement: item.cantidad } } });
     }
 
-    // Marcar orden PAGADA con el paymentId de Stripe
-    await prisma.orden.update({
-      where: { id: orden.id },
-      data: { estado: 'PAGADA', mpPaymentId: intent.id },
-    });
+    await prisma.orden.update({ where: { id: orden.id }, data: { estado: 'PAGADA', mpPaymentId: intent.id } });
+    broadcastEvento(orden.eventoId, { stock: true });
 
-    broadcastEvento(orden.eventoId);
-
-    // Enviar email con boleto
+    // Enviar email
     const cfg = orden.empresa?.config;
     const smtpConfig = cfg?.smtpHost
       ? { host: cfg.smtpHost, port: cfg.smtpPort, user: cfg.smtpUser ?? undefined, pass: cfg.smtpPass ?? undefined, from: cfg.smtpFrom ?? undefined, fromNombre: cfg.smtpFromNombre ?? undefined }
@@ -196,15 +175,7 @@ export async function stripeWebhook(req: Request, res: Response) {
           categoria: boletos[0].categoria.nombre,
           canal: 'ONLINE',
         });
-        await enviarBoleto({
-          to: orden.compradorEmail,
-          nombre: orden.compradorNombre ?? 'Cliente',
-          evento: orden.evento.nombre,
-          pdfBuffer: pdf,
-          boletoUUID: boletos[0].id,
-          smtpConfig,
-          baseUrl,
-        });
+        await enviarBoleto({ to: orden.compradorEmail, nombre: orden.compradorNombre ?? 'Cliente', evento: orden.evento.nombre, pdfBuffer: pdf, boletoUUID: boletos[0].id, smtpConfig, baseUrl });
       } catch (e) { console.error('[stripe/webhook] Email:', e); }
     }
 

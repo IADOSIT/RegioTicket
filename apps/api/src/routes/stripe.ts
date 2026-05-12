@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { crearStripeIntent, stripeWebhook } from '../controllers/stripeController';
-import { publicLimiter } from '../middleware/rateLimiter';
+import { publicLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
