@@ -8,10 +8,21 @@ export async function listarEventos(req: Request, res: Response) {
   try {
     const ahora = new Date();
     const pasados = req.query.pasados === '1';
+    const empresaSlug = req.query.empresa as string | undefined;
 
-    const where = pasados
+    // Resolver empresaId desde slug si viene el parámetro
+    let empresaId: string | undefined;
+    if (empresaSlug) {
+      const empresa = await prisma.empresa.findUnique({ where: { slug: empresaSlug, activo: true }, select: { id: true } });
+      if (!empresa) { res.json([]); return; }
+      empresaId = empresa.id;
+    }
+
+    const baseWhere = pasados
       ? { OR: [{ estado: 'FINALIZADO' as const }, { estado: 'ACTIVO' as const, fechaEvento: { lt: ahora } }] }
       : { estado: 'ACTIVO' as const, fechaEvento: { gte: ahora } };
+
+    const where = empresaId ? { ...baseWhere, empresaId } : baseWhere;
 
     const eventos = await prisma.evento.findMany({
       where,
@@ -22,6 +33,27 @@ export async function listarEventos(req: Request, res: Response) {
   } catch {
     res.status(500).json({ error: 'Error obteniendo eventos' });
   }
+}
+
+export async function getEmpresaPublic(req: Request, res: Response) {
+  try {
+    const empresa = await prisma.empresa.findUnique({
+      where: { slug: req.params.slug, activo: true },
+      select: {
+        id: true, nombre: true, slug: true, logo: true,
+        config: {
+          select: {
+            colorPrimario: true, descripcionCorta: true, heroTexto: true,
+            bannerUrl: true, facebook: true, instagram: true, tiktok: true,
+            emailContacto: true, telefonoContacto: true,
+            waProvider: true, waFrom: true,
+          },
+        },
+      },
+    });
+    if (!empresa) return res.status(404).json({ error: 'Empresa no encontrada' });
+    res.json(empresa);
+  } catch { res.status(500).json({ error: 'Error' }); }
 }
 
 export async function obtenerEvento(req: Request, res: Response) {

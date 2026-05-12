@@ -245,6 +245,35 @@ async function calcularMetricas(eventoId: string) {
   };
 }
 
+// ──────────────────── REEMBOLSOS ────────────────────
+
+export async function reembolsarOrden(req: Request, res: Response) {
+  try {
+    const orden = await prisma.orden.findUnique({
+      where: { id: req.params.id, ...ew(req) },
+      include: { boletos: { include: { categoria: true } } },
+    });
+    if (!orden) return res.status(404).json({ error: 'Orden no encontrada' });
+    if (orden.estado !== 'PAGADA') return res.status(400).json({ error: 'Solo se pueden reembolsar órdenes pagadas' });
+
+    // Agrupar boletos por categoría para restaurar stock
+    const stockPorCategoria: Record<string, number> = {};
+    for (const b of orden.boletos) {
+      stockPorCategoria[b.categoriaId] = (stockPorCategoria[b.categoriaId] ?? 0) + 1;
+    }
+
+    await prisma.$transaction([
+      prisma.orden.update({ where: { id: orden.id }, data: { estado: 'REEMBOLSADA' } }),
+      prisma.boleto.updateMany({ where: { ordenId: orden.id }, data: { estado: 'CANCELADO' } }),
+      ...Object.entries(stockPorCategoria).map(([catId, qty]) =>
+        prisma.categoria.update({ where: { id: catId }, data: { disponibles: { increment: qty } } })
+      ),
+    ]);
+
+    res.json({ ok: true });
+  } catch { res.status(500).json({ error: 'Error procesando reembolso' }); }
+}
+
 // ──────────────────── CONFIGURACIÓN SISTEMA ────────────────────
 
 export async function getConfig(_req: Request, res: Response) {

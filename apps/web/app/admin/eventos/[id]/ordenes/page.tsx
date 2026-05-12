@@ -1,4 +1,4 @@
-// Tabla de órdenes paginada con filtros y exportar CSV
+// Tabla de órdenes paginada con filtros, exportar CSV y reembolso
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { formatMXN, timeAgo } from '@/lib/utils';
-import { DownloadIcon } from 'lucide-react';
+import { DownloadIcon, RotateCcwIcon } from 'lucide-react';
 
 export default function OrdenesPage() {
   const { id: eventoId } = useParams();
@@ -30,6 +30,14 @@ export default function OrdenesPage() {
   useEffect(() => { if (token) cargar(); }, [token, page, filtroEstado, filtroCanal]);
 
   const estadoBadge = (e: string) => e === 'PAGADA' ? 'default' : e === 'PENDIENTE' ? 'warning' : 'secondary';
+
+  async function reembolsar(ordenId: string) {
+    if (!confirm('¿Reembolsar esta orden? Los boletos quedarán cancelados y el stock se restaurará.')) return;
+    try {
+      await api.admin.ordenes.reembolsar(ordenId, token);
+      cargar();
+    } catch { alert('Error procesando reembolso'); }
+  }
 
   return (
     <div className="p-6">
@@ -60,7 +68,8 @@ export default function OrdenesPage() {
               <th className="pb-3 pr-4">Pago</th>
               <th className="pb-3 pr-4">Monto</th>
               <th className="pb-3 pr-4">Estado</th>
-              <th className="pb-3">Fecha</th>
+              <th className="pb-3 pr-4">Fecha</th>
+              <th className="pb-3"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -74,7 +83,14 @@ export default function OrdenesPage() {
                 <td className="py-3 pr-4 text-gray-600 text-xs">{o.formaPago}</td>
                 <td className="py-3 pr-4 font-semibold">{formatMXN(o.total)}</td>
                 <td className="py-3 pr-4"><Badge variant={estadoBadge(o.estado)}>{o.estado}</Badge></td>
-                <td className="py-3 text-gray-400 text-xs">{timeAgo(o.createdAt)}</td>
+                <td className="py-3 pr-4 text-gray-400 text-xs">{timeAgo(o.createdAt)}</td>
+                <td className="py-3">
+                  {o.estado === 'PAGADA' && (
+                    <Button variant="outline" size="sm" onClick={() => reembolsar(o.id)} className="text-xs text-red-600 border-red-200 hover:bg-red-50">
+                      <RotateCcwIcon size={12} className="mr-1" />Reembolsar
+                    </Button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

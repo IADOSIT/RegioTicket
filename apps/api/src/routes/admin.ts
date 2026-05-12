@@ -8,6 +8,7 @@ import {
   getMapa, saveMapa,
   getConfig, saveConfig,
   getQREvento,
+  reembolsarOrden,
 } from '../controllers/adminController';
 import {
   listarEmpresas, crearEmpresa, actualizarEmpresa,
@@ -71,6 +72,7 @@ router.put('/categorias/:id/toggle-taquilla', toggleTaquilla);
 // Órdenes
 router.get('/ordenes', listarOrdenes);
 router.get('/ordenes/exportar', exportarOrdenes);
+router.put('/ordenes/:id/reembolsar', reembolsarOrden);
 router.get('/dashboard/:eventoId', dashboardStream);
 
 // Usuarios

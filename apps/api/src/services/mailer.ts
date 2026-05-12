@@ -73,6 +73,33 @@ export async function enviarBoleto(opts: {
   });
 }
 
+export async function enviarReset(opts: {
+  to: string; nombre: string; resetUrl: string; smtpConfig?: SmtpConfig;
+}) {
+  const transporter = getTransport(opts.smtpConfig);
+  const html = `
+  <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+    <div style="background:#0f172a;padding:24px 32px;text-align:center;">
+      <span style="font-size:24px;font-weight:800;color:#fff;">Regio<span style="color:#4ade80;">Ticket</span></span>
+    </div>
+    <div style="padding:32px;">
+      <h2 style="color:#111827;margin:0 0 8px;">Restablecer contraseña</h2>
+      <p style="color:#6b7280;margin:0 0 24px;">Hola <strong>${opts.nombre}</strong>, recibimos una solicitud para restablecer tu contraseña.</p>
+      <a href="${opts.resetUrl}" style="display:inline-block;background:#16a34a;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Restablecer contraseña</a>
+      <p style="margin-top:24px;font-size:12px;color:#9ca3af;">Este enlace es válido por 1 hora. Si no solicitaste esto, ignora este correo.</p>
+    </div>
+    <div style="background:#f9fafb;padding:16px 32px;text-align:center;font-size:11px;color:#9ca3af;">
+      Desarrollado por <a href="https://iados.mx" style="color:#16a34a;">iaDoS</a> · iados.mx
+    </div>
+  </div>`;
+  await transporter.sendMail({
+    from: fromField(opts.smtpConfig),
+    to: opts.to,
+    subject: 'Restablecer contraseña — RegioTicket',
+    html,
+  });
+}
+
 export async function enviarReenvio(opts: {
   to: string; nombre: string; evento: string;
   pdfBuffer: Buffer; boletoUUID: string;

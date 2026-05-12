@@ -1,6 +1,6 @@
 // Rutas de autenticación
 import { Router } from 'express';
-import { login } from '../controllers/authController';
+import { login, forgotPassword, resetPassword } from '../controllers/authController';
 import { validate } from '../middleware/validate';
 import { authLimiter } from '../middleware/rateLimit';
 import { z } from 'zod';
@@ -12,5 +12,7 @@ const loginSchema = z.object({
 });
 
 router.post('/login', authLimiter, validate(loginSchema), login);
+router.post('/forgot-password', authLimiter, forgotPassword);
+router.post('/reset-password', resetPassword);
 
 export default router;

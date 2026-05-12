@@ -9,7 +9,7 @@ export async function listarEmpresas(_req: Request, res: Response) {
     const empresas = await prisma.empresa.findMany({
       include: {
         _count: { select: { usuarios: true, eventos: true } },
-        config: { select: { smtpHost: true, waProvider: true } },
+        config: { select: { smtpHost: true, waProvider: true, colorPrimario: true, bannerUrl: true } },
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -23,7 +23,6 @@ export async function crearEmpresa(req: Request, res: Response) {
     const empresa = await prisma.empresa.create({
       data: { nombre, slug: slug || slugify(nombre), logo },
     });
-    // Crear config por defecto
     await prisma.configEmpresa.create({ data: { empresaId: empresa.id } });
     res.status(201).json(empresa);
   } catch (e: any) {
@@ -55,7 +54,6 @@ export async function getConfigEmpresa(req: Request, res: Response) {
     if (!config) {
       config = await prisma.configEmpresa.create({ data: { empresaId } });
     }
-    // Ocultar contraseñas sensibles
     const safe = { ...config, smtpPass: config.smtpPass ? '••••••••' : '', waToken: config.waToken ? '••••••••' : '' };
     res.json(safe);
   } catch { res.status(500).json({ error: 'Error obteniendo configuración' }); }
@@ -72,6 +70,9 @@ export async function saveConfigEmpresa(req: Request, res: Response) {
       smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom, smtpFromNombre,
       waProvider, waToken, waPhoneId, waFrom,
       ventanaAntesHoras, ventanaDespuesHoras,
+      // Apariencia
+      colorPrimario, descripcionCorta, heroTexto, bannerUrl,
+      facebook, instagram, tiktok, emailContacto, telefonoContacto,
     } = req.body;
 
     const data: any = {
@@ -80,10 +81,15 @@ export async function saveConfigEmpresa(req: Request, res: Response) {
       waProvider, waPhoneId, waFrom,
       ventanaAntesHoras: ventanaAntesHoras ? Number(ventanaAntesHoras) : undefined,
       ventanaDespuesHoras: ventanaDespuesHoras ? Number(ventanaDespuesHoras) : undefined,
+      colorPrimario, descripcionCorta, heroTexto, bannerUrl,
+      facebook, instagram, tiktok, emailContacto, telefonoContacto,
     };
-    // Solo actualizar contraseñas si no son placeholders
+    // No sobreescribir con placeholder
     if (smtpPass && smtpPass !== '••••••••') data.smtpPass = smtpPass;
     if (waToken && waToken !== '••••••••') data.waToken = waToken;
+
+    // Limpiar undefined para no pisar valores existentes con null
+    Object.keys(data).forEach((k) => { if (data[k] === undefined) delete data[k]; });
 
     const config = await prisma.configEmpresa.upsert({
       where: { empresaId },

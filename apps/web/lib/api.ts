@@ -83,9 +83,10 @@ export const api = {
         request<any>('/admin/config', { method: 'PUT', body: JSON.stringify(body), headers: authHeaders(token) }),
     },
     configEmpresa: {
-      get:  (token: string) => request<any>('/admin/config-empresa', { headers: authHeaders(token) }),
-      save: (body: object, token: string) =>
-        request<any>('/admin/config-empresa', { method: 'PUT', body: JSON.stringify(body), headers: authHeaders(token) }),
+      get:  (token: string, empresaId?: string) =>
+        request<any>(`/admin/config-empresa${empresaId ? `?empresaId=${empresaId}` : ''}`, { headers: authHeaders(token) }),
+      save: (body: object, token: string, empresaId?: string) =>
+        request<any>(`/admin/config-empresa${empresaId ? `?empresaId=${empresaId}` : ''}`, { method: 'PUT', body: JSON.stringify(body), headers: authHeaders(token) }),
     },
     qr: {
       get: (eventoId: string, token: string) =>
@@ -96,6 +97,8 @@ export const api = {
         const qs = new URLSearchParams(params).toString();
         return request<any>(`/admin/ordenes?${qs}`, { headers: authHeaders(token) });
       },
+      reembolsar: (id: string, token: string) =>
+        request<any>(`/admin/ordenes/${id}/reembolsar`, { method: 'PUT', headers: authHeaders(token) }),
     },
     usuarios: {
       list: (token: string) => request<any[]>('/admin/usuarios', { headers: authHeaders(token) }),

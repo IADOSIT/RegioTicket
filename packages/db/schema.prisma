@@ -99,6 +99,17 @@ model ConfigEmpresa {
   ventanaAntesHoras   Int      @default(4)
   ventanaDespuesHoras Int      @default(2)
 
+  // Apariencia del subdominio
+  colorPrimario       String?
+  descripcionCorta    String?
+  heroTexto           String?
+  bannerUrl           String?
+  facebook            String?
+  instagram           String?
+  tiktok              String?
+  emailContacto       String?
+  telefonoContacto    String?
+
   updatedAt           DateTime @updatedAt
 }
 
@@ -283,4 +294,15 @@ model MapaVenue {
   anchoM    Float    @default(20)
   altoM     Float    @default(15)
   updatedAt DateTime @updatedAt
+}
+
+model TokenReset {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  usado     Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -46,6 +47,9 @@ export default function AdminLoginPage() {
             </div>
             {error && <p className="text-red-500 text-sm">{error}</p>}
             <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Ingresando…' : 'Ingresar'}</Button>
+            <div className="text-center">
+              <Link href="/admin/forgot-password" className="text-xs text-gray-400 hover:text-gray-600">¿Olvidaste tu contraseña?</Link>
+            </div>
           </form>
         </div>
         <p className="text-center text-xs text-gray-400 mt-6">Desarrollado por iaDoS · iados.mx</p>

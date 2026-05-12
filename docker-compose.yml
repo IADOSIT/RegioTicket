@@ -34,6 +34,7 @@ services:
       - NEXTAUTH_SECRET=b8745b90b3972fd6d3123fbed527b50e246d57c9b08873ad09b9f44d67ace7a4
       - NEXT_PUBLIC_API_URL=https://regioticket.iados.online/api
       - API_INTERNAL_URL=http://regioticket_api:4000
+      - NEXT_PUBLIC_BASE_DOMAIN=regioticket.iados.online
     networks:
       - web_network
     dns:

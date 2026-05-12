@@ -5,13 +5,14 @@ import cors from 'cors';
 import helmet from 'helmet';
 
 import authRouter from './routes/auth';
-import eventosRouter from './routes/eventos';
+import eventosRouter, { empresaPublicRouter } from './routes/eventos';
 import ordenesRouter from './routes/ordenes';
 import boletosRouter from './routes/boletos';
 import accesosRouter from './routes/accesos';
 import taquillaRouter from './routes/taquilla';
 import adminRouter from './routes/admin';
 import webhookRouter from './routes/webhook';
+import misBoletoRouter from './routes/misBoletos';
 import { startExpirarOrdenes } from './jobs/expirarOrdenes';
 import { prisma } from './utils/helpers';
 
@@ -28,12 +29,14 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/auth', authRouter);
 app.use('/api/eventos', eventosRouter);
+app.use('/api/empresa', empresaPublicRouter);
 app.use('/api/ordenes', ordenesRouter);
 app.use('/api/boletos', boletosRouter);
 app.use('/api/accesos', accesosRouter);
 app.use('/api/taquilla', taquillaRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/webhook', webhookRouter);
+app.use('/api/mis-boletos', misBoletoRouter);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, ts: new Date() }));
 
