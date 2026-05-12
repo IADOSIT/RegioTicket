@@ -199,6 +199,7 @@ export default function AdminPOSPage() {
         </div>
       </div>
     </div>
+    </>
   );
 
   // ── Pantalla POS principal ───────────────────────────────────────────────
