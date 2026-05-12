@@ -98,7 +98,7 @@ export const api = {
     },
     qr: {
       get: (eventoId: string, token: string) =>
-        request<{ qr: string; url: string; nombre: string }>(`/admin/eventos/${eventoId}/qr`, { headers: authHeaders(token) }),
+        request<{ qr: string; url: string; nombre: string; imagen: string | null; lugar: string | null; fechaEvento: string | null; empresa: { nombre: string; logo: string | null } | null }>(`/admin/eventos/${eventoId}/qr`, { headers: authHeaders(token) }),
     },
     ordenes: {
       list: (params: Record<string, string>, token: string) => {

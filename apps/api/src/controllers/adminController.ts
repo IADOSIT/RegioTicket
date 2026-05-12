@@ -54,14 +54,14 @@ export async function crearEvento(req: Request, res: Response) {
 
 export async function actualizarEvento(req: Request, res: Response) {
   try {
-    const { fechaEvento, fechaFin, empresaId: _eid, ...rest } = req.body;
+    const { fechaEvento, fechaFin, empresaId: bodyEmpresaId, ...rest } = req.body;
+    const data: any = { ...rest };
+    if (fechaEvento) data.fechaEvento = new Date(fechaEvento);
+    if (fechaFin) data.fechaFin = new Date(fechaFin);
+    if (req.user!.rol === 'SUPER_ADMIN' && bodyEmpresaId !== undefined) data.empresaId = bodyEmpresaId || null;
     const evento = await prisma.evento.update({
       where: { id: req.params.id, ...ew(req) },
-      data: {
-        ...rest,
-        ...(fechaEvento ? { fechaEvento: new Date(fechaEvento) } : {}),
-        ...(fechaFin ? { fechaFin: new Date(fechaFin) } : {}),
-      },
+      data,
     });
     res.json(evento);
   } catch { res.status(500).json({ error: 'Error actualizando evento' }); }
@@ -516,14 +516,14 @@ export async function getQREvento(req: Request, res: Response) {
   try {
     const evento = await prisma.evento.findUnique({
       where: { id: req.params.id, ...ew(req) },
-      select: { slug: true, nombre: true },
+      select: { slug: true, nombre: true, imagen: true, lugar: true, fechaEvento: true, empresa: { select: { nombre: true, logo: true } } },
     });
     if (!evento) return res.status(404).json({ error: 'Evento no encontrado' });
 
     const baseUrl = process.env.NEXTAUTH_URL || 'https://regioticket.iados.online';
     const url = `${baseUrl}/eventos/${evento.slug}`;
-    const qrDataUrl = await QRCodeLib.toDataURL(url, { width: 400, margin: 2, color: { dark: '#0f172a', light: '#ffffff' } });
-    res.json({ qr: qrDataUrl, url, nombre: evento.nombre });
+    const qrDataUrl = await QRCodeLib.toDataURL(url, { width: 500, margin: 2, color: { dark: '#0f172a', light: '#ffffff' } });
+    res.json({ qr: qrDataUrl, url, nombre: evento.nombre, imagen: evento.imagen, lugar: evento.lugar, fechaEvento: evento.fechaEvento, empresa: evento.empresa });
   } catch { res.status(500).json({ error: 'Error generando QR' }); }
 }
 
@@ -580,9 +580,10 @@ export async function crearUsuario(req: Request, res: Response) {
 
 export async function actualizarUsuario(req: Request, res: Response) {
   try {
-    const { password, empresaId: _eid, ...rest } = req.body;
+    const { password, empresaId: bodyEmpresaId, ...rest } = req.body;
     const data: any = { ...rest };
     if (password) data.password = await bcrypt.hash(password, 10);
+    if (req.user!.rol === 'SUPER_ADMIN' && bodyEmpresaId !== undefined) data.empresaId = bodyEmpresaId || null;
     const u = await prisma.usuario.update({
       where: { id: req.params.id, ...ew(req) },
       data,

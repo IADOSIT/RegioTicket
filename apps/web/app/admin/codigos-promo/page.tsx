@@ -19,9 +19,11 @@ export default function CodigosPromoPage() {
   const token = (session?.user as any)?.apiToken;
   const rol = (session?.user as any)?.rol;
 
+  const isSuperAdmin = rol === 'SUPER_ADMIN';
   const [codigos, setCodigos] = useState<any[]>([]);
   const [eventos, setEventos] = useState<any[]>([]);
-  const [form, setForm] = useState({ codigo: '', tipo: 'PORCENTAJE', valor: '', maxUsos: '', eventoId: '', expiresAt: '' });
+  const [empresas, setEmpresas] = useState<any[]>([]);
+  const [form, setForm] = useState({ codigo: '', tipo: 'PORCENTAJE', valor: '', maxUsos: '', eventoId: '', expiresAt: '', empresaId: '' });
   const [showing, setShowing] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -34,6 +36,7 @@ export default function CodigosPromoPage() {
     if (!token) return;
     cargar();
     api.admin.eventos.list(token).then(setEventos);
+    if (isSuperAdmin) api.admin.empresas.list(token).then(setEmpresas);
   }, [token]);
 
   const set = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
@@ -49,8 +52,9 @@ export default function CodigosPromoPage() {
         maxUsos: form.maxUsos ? Number(form.maxUsos) : undefined,
         eventoId: form.eventoId || undefined,
         expiresAt: form.expiresAt || undefined,
+        empresaId: isSuperAdmin ? (form.empresaId || undefined) : undefined,
       }, token);
-      setForm({ codigo: '', tipo: 'PORCENTAJE', valor: '', maxUsos: '', eventoId: '', expiresAt: '' });
+      setForm({ codigo: '', tipo: 'PORCENTAJE', valor: '', maxUsos: '', eventoId: '', expiresAt: '', empresaId: '' });
       setShowing(false);
       cargar();
     } catch (e: any) { alert(e.message); }
@@ -132,6 +136,15 @@ export default function CodigosPromoPage() {
                 <Label>Expira <span className="text-gray-400">(opcional)</span></Label>
                 <Input type="datetime-local" value={form.expiresAt} onChange={(e) => set('expiresAt', e.target.value)} />
               </div>
+              {isSuperAdmin && (
+                <div className="space-y-1 sm:col-span-2">
+                  <Label>Empresa <span className="text-gray-400">(vacío = todas)</span></Label>
+                  <select className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={form.empresaId} onChange={(e) => set('empresaId', e.target.value)}>
+                    <option value="">Todas las empresas</option>
+                    {empresas.map((e: any) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+                  </select>
+                </div>
+              )}
             </div>
             <div className="flex gap-2 mt-4">
               <Button onClick={crear} disabled={loading}>Crear código</Button>
