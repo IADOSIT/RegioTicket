@@ -138,9 +138,8 @@ export async function stripeWebhook(req: Request, res: Response) {
       for (let n = 0; n < item.cantidad; n++) {
         const numero = await siguienteNumeroBoleto(orden.eventoId);
         const id = uuidv4();
-        const firma = firmarBoleto(id);
         const boleto = await prisma.boleto.create({
-          data: { id, ordenId: orden.id, categoriaId: item.categoriaId!, numero, qrData: `${id}|${firma}`, estado: 'VALIDO' },
+          data: { id, ordenId: orden.id, categoriaId: item.categoriaId!, numero, qrFirma: firmarBoleto(id), estado: 'VALIDO' },
         });
         boletos.push({ ...boleto, categoria: item.categoria });
       }
