@@ -32,7 +32,7 @@ function ConfigEmpresaForm() {
     ventanaAntesHoras: 4, ventanaDespuesHoras: 2,
     colorPrimario: '#16a34a', colorNavbar: '', colorBoton: '',
     colorTextoBoton: '#ffffff', colorSecundario: '', colorHero: '',
-    colorFondo: '#f8fafc', colorTexto: '#0f172a',
+    colorFondo: '#f8fafc', colorTexto: '#0f172a', tema: 'aurora',
     descripcionCorta: '', heroTexto: '',
     bannerUrl: '', facebook: '', instagram: '', tiktok: '',
     emailContacto: '', telefonoContacto: '',
@@ -164,6 +164,81 @@ function ConfigEmpresaForm() {
           <div className="flex flex-col xl:flex-row gap-6">
             {/* Columna izquierda: controles */}
             <div className="flex-1 space-y-5">
+
+              {/* Selector de temas */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Modelo de diseño</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    {
+                      key: 'aurora', nombre: 'Aurora', desc: 'Moderno · Luminoso',
+                      bg: '#f0f4f8', cardBg: '#ffffff', cardBorder: '#e2e8f0', cardRadius: '14px',
+                      textColor: '#0f172a', subColor: '#94a3b8', btnRadius: '100px',
+                      heroBg: 'linear-gradient(135deg, #16a34a, #15803d)',
+                    },
+                    {
+                      key: 'nebula', nombre: 'Nebula', desc: 'Dark · Glassmorphism',
+                      bg: '#080b14', cardBg: 'rgba(255,255,255,0.07)', cardBorder: 'rgba(255,255,255,0.1)', cardRadius: '12px',
+                      textColor: '#f1f5f9', subColor: '#475569', btnRadius: '12px',
+                      heroBg: 'radial-gradient(ellipse at top, #16a34a30, #080b14)',
+                    },
+                    {
+                      key: 'regio', nombre: 'Regio', desc: 'Bold · Urbano',
+                      bg: '#111111', cardBg: '#1a1a1a', cardBorder: '#2a2a2a', cardRadius: '2px',
+                      textColor: '#ffffff', subColor: '#6b7280', btnRadius: '0px',
+                      heroBg: 'linear-gradient(135deg, #16a34a22, #111)',
+                    },
+                  ].map((t) => {
+                    const accent = pc('colorPrimario', '#16a34a');
+                    const isSelected = form.tema === t.key;
+                    return (
+                      <button
+                        key={t.key}
+                        type="button"
+                        onClick={() => set('tema', t.key)}
+                        className="relative rounded-xl overflow-hidden text-left transition-all"
+                        style={{
+                          border: isSelected ? `2px solid ${accent}` : '2px solid #e5e7eb',
+                          boxShadow: isSelected ? `0 0 0 3px ${accent}30` : 'none',
+                        }}
+                      >
+                        {/* Mini preview */}
+                        <div className="h-28 overflow-hidden" style={{ background: t.bg }}>
+                          {/* Mini hero */}
+                          <div className="h-10" style={{ background: t.heroBg.replace('#16a34a', accent) }}>
+                            <div className="flex items-center gap-1 px-2 pt-1.5">
+                              <div className="w-3 h-3 rounded-sm opacity-60" style={{ background: accent }} />
+                              <div className="h-1.5 rounded-full bg-white/40 w-12" />
+                            </div>
+                          </div>
+                          {/* Mini cards */}
+                          <div className="px-2 pt-2 flex gap-1.5">
+                            {[1, 2].map((i) => (
+                              <div key={i} className="flex-1 overflow-hidden" style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: t.cardRadius }}>
+                                <div className="h-5" style={{ background: `${accent}30` }} />
+                                <div className="p-1">
+                                  <div className="h-1 rounded-full mb-0.5" style={{ background: t.textColor, opacity: .5, width: '70%' }} />
+                                  <div className="h-1 rounded-full" style={{ background: t.subColor, opacity: .4, width: '50%' }} />
+                                  <div className="mt-1 h-2.5 flex items-center justify-center text-white text-[7px] font-bold" style={{ background: accent, borderRadius: t.btnRadius }}>Ver</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        {/* Label */}
+                        <div className="px-2.5 py-2 bg-white">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-gray-800">{t.nombre}</span>
+                            {isSelected && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: accent }}>Activo</span>}
+                          </div>
+                          <span className="text-[10px] text-gray-400">{t.desc}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Paleta de colores</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -188,67 +263,93 @@ function ConfigEmpresaForm() {
 
             {/* Columna derecha: preview en tiempo real */}
             <div className="xl:w-80 xl:sticky xl:top-4 xl:self-start shrink-0">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Vista previa</p>
-              <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm text-xs" style={{ backgroundColor: fondoColor }}>
-                {/* Navbar mock */}
-                <div className="flex items-center gap-2 px-3 py-2" style={{ backgroundColor: navbarColor }}>
-                  <div className="w-5 h-5 rounded bg-white/20 flex items-center justify-center">
-                    <div className="w-3 h-3 rounded-sm bg-white/60" />
-                  </div>
-                  <span className="text-white font-bold text-xs flex-1">
-                    {form.descripcionCorta ? (form.descripcionCorta.slice(0, 14) + (form.descripcionCorta.length > 14 ? '…' : '')) : 'Tu Empresa'}
-                  </span>
-                  <SearchIcon size={11} className="text-white/50" />
-                  <TicketIcon size={11} className="text-white/70" />
-                </div>
-                {/* Hero mock */}
-                <div className="px-3 py-5 text-center" style={{ backgroundColor: heroColor }}>
-                  <p className="font-extrabold text-white leading-tight mb-2" style={{ fontSize: '11px' }}>
-                    {form.heroTexto || 'Título del evento principal'}
-                  </p>
-                  <button
-                    className="text-xs font-bold px-3 py-1 rounded-lg"
-                    style={{ backgroundColor: botonColor, color: textoBoton, border: 'none' }}
-                  >
-                    Ver boletos →
-                  </button>
-                </div>
-                {/* Features strip */}
-                <div className="flex justify-around px-2 py-1.5" style={{ backgroundColor: pc('colorPrimario', '#16a34a') }}>
-                  {['Seguro', 'Rápido', 'Digital'].map((t) => (
-                    <span key={t} className="text-white font-medium" style={{ fontSize: '9px' }}>{t}</span>
-                  ))}
-                </div>
-                {/* Body mock */}
-                <div className="px-3 py-3" style={{ backgroundColor: fondoColor }}>
-                  <p className="font-bold mb-2" style={{ color: form.colorTexto || '#0f172a', fontSize: '10px' }}>Eventos disponibles</p>
-                  <div className="grid grid-cols-2 gap-2 mb-3">
-                    {[1, 2].map((i) => (
-                      <div key={i} className="bg-white rounded-lg p-2 border border-gray-100 shadow-sm">
-                        <div className="w-full h-8 rounded mb-1.5" style={{ backgroundColor: `${secundario}22` }} />
-                        <div className="h-1.5 rounded bg-gray-200 mb-1 w-3/4" />
-                        <div className="h-1.5 rounded bg-gray-100 w-1/2 mb-1.5" />
-                        <div
-                          className="text-center py-0.5 rounded font-semibold"
-                          style={{ backgroundColor: botonColor, color: textoBoton, fontSize: '8px' }}
-                        >
-                          Comprar
-                        </div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Vista previa — {form.tema === 'nebula' ? 'Nebula' : form.tema === 'regio' ? 'Regio' : 'Aurora'}</p>
+              {(() => {
+                const t = form.tema || 'aurora';
+                const accent = pc('colorPrimario', '#16a34a');
+                const nav = pc('colorNavbar', accent);
+                const btn = pc('colorBoton', accent);
+                const btnTxt = pc('colorTextoBoton', '#ffffff');
+                const hero = pc('colorHero', accent);
+
+                const previewBg = t === 'nebula' ? '#080b14' : t === 'regio' ? '#111111' : fondoColor;
+                const cardBg = t === 'nebula' ? 'rgba(255,255,255,0.07)' : t === 'regio' ? '#1a1a1a' : '#ffffff';
+                const cardBorder = t === 'nebula' ? 'rgba(255,255,255,0.1)' : t === 'regio' ? `2px solid ${accent}` : '1px solid #f1f5f9';
+                const cardRadius = t === 'nebula' ? '10px' : t === 'regio' ? '2px' : '14px';
+                const cardTopBorder = t === 'regio' ? `3px solid ${accent}` : undefined;
+                const bodyText = t === 'aurora' ? (form.colorTexto || '#0f172a') : '#f1f5f9';
+                const subText = t === 'aurora' ? '#94a3b8' : '#475569';
+                const btnRadius = t === 'aurora' ? '100px' : t === 'regio' ? '0px' : '10px';
+                const heroStyle: React.CSSProperties = t === 'nebula'
+                  ? { background: `radial-gradient(ellipse at top, ${accent}30, #080b14)` }
+                  : t === 'regio'
+                  ? { background: `linear-gradient(135deg, ${accent}22, #111)`, borderTop: `2px solid ${accent}` }
+                  : { backgroundColor: hero };
+
+                return (
+                  <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm text-xs" style={{ backgroundColor: previewBg }}>
+                    {/* Navbar */}
+                    <div className="flex items-center gap-2 px-3 py-2" style={{ backgroundColor: nav }}>
+                      <div className="w-5 h-5 rounded bg-white/20 flex items-center justify-center">
+                        <div className="w-3 h-3 rounded-sm bg-white/60" />
                       </div>
-                    ))}
+                      <span className="text-white font-bold text-xs flex-1">
+                        {form.descripcionCorta ? form.descripcionCorta.slice(0, 14) + '…' : 'Tu Empresa'}
+                      </span>
+                      <SearchIcon size={11} className="text-white/50" />
+                      <TicketIcon size={11} className="text-white/70" />
+                    </div>
+
+                    {/* Hero */}
+                    <div className="px-3 py-5 text-center" style={heroStyle}>
+                      {t === 'regio' && <div className="text-left text-[8px] font-black uppercase tracking-widest mb-1" style={{ color: accent }}>— Eventos</div>}
+                      <p className={`text-white leading-tight mb-2 ${t === 'regio' ? 'font-black uppercase text-left' : 'font-extrabold'}`} style={{ fontSize: '11px' }}>
+                        {form.heroTexto || 'Título del evento principal'}
+                      </p>
+                      <div className={t === 'regio' ? 'text-left' : ''}>
+                        <button className="text-[10px] font-bold px-3 py-1" style={{ backgroundColor: btn, color: btnTxt, borderRadius: btnRadius }}>
+                          Ver boletos →
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Features strip */}
+                    <div className="flex justify-around px-2 py-1.5" style={{ backgroundColor: accent }}>
+                      {['Seguro', 'Rápido', 'Digital'].map((lbl) => (
+                        <span key={lbl} className="text-white font-medium" style={{ fontSize: '9px' }}>{lbl}</span>
+                      ))}
+                    </div>
+
+                    {/* Cards */}
+                    <div className="px-3 py-3" style={{ backgroundColor: previewBg }}>
+                      <p className={`font-bold mb-2 ${t === 'regio' ? 'uppercase tracking-wide' : ''}`} style={{ color: bodyText, fontSize: '10px' }}>Eventos disponibles</p>
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        {[1, 2].map((i) => (
+                          <div key={i} style={{ background: cardBg, border: cardBorder, borderRadius: cardRadius, borderTop: cardTopBorder, overflow: 'hidden' }}>
+                            <div className="w-full h-7" style={{ background: t === 'nebula' ? `${accent}25` : `${accent}20` }} />
+                            <div className="p-1.5">
+                              <div className="h-1.5 rounded-sm mb-1" style={{ background: bodyText, opacity: .4, width: '75%' }} />
+                              <div className="h-1 rounded-sm mb-1.5" style={{ background: subText, opacity: .3, width: '55%' }} />
+                              <div className="h-3 flex items-center justify-center text-[8px] font-bold" style={{ background: btn, color: btnTxt, borderRadius: btnRadius }}>Ver</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Footer contacto */}
+                      <div className="py-1.5 px-2 text-center rounded" style={{ background: t === 'aurora' ? `${accent}15` : 'rgba(255,255,255,0.05)' }}>
+                        <span style={{ color: accent, fontSize: '9px', fontWeight: 600 }}>Facebook · Instagram · Contacto</span>
+                      </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="px-3 py-2 text-center" style={{ backgroundColor: nav }}>
+                      <span className="text-white/60" style={{ fontSize: '8px' }}>
+                        {form.descripcionCorta || 'Tu empresa · todos los derechos'}
+                      </span>
+                    </div>
                   </div>
-                  {/* Contacto mock */}
-                  <div className="rounded-lg py-2 px-2 text-center" style={{ backgroundColor: `${secundario}15` }}>
-                    <span style={{ color: secundario, fontSize: '9px', fontWeight: 600 }}>Facebook · Instagram · Contacto</span>
-                  </div>
-                </div>
-                {/* Footer mock */}
-                <div className="px-3 py-2 text-center" style={{ backgroundColor: navbarColor }}>
-                  <span className="text-white/60" style={{ fontSize: '8px' }}>
-                    {form.descripcionCorta || 'Tu empresa · todos los derechos'}
-                  </span>
-                </div>
-              </div>
+                );
+              })()}
               <p className="text-center text-gray-400 mt-2" style={{ fontSize: '10px' }}>El preview se actualiza en tiempo real</p>
             </div>
           </div>

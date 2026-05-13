@@ -72,7 +72,7 @@ export async function saveConfigEmpresa(req: Request, res: Response) {
       ventanaAntesHoras, ventanaDespuesHoras,
       // Apariencia
       colorPrimario, colorNavbar, colorBoton, colorTextoBoton,
-      colorSecundario, colorHero, colorFondo, colorTexto,
+      colorSecundario, colorHero, colorFondo, colorTexto, tema,
       descripcionCorta, heroTexto, bannerUrl,
       facebook, instagram, tiktok, emailContacto, telefonoContacto,
       // Stripe
@@ -90,7 +90,7 @@ export async function saveConfigEmpresa(req: Request, res: Response) {
       ventanaAntesHoras: ventanaAntesHoras ? Number(ventanaAntesHoras) : undefined,
       ventanaDespuesHoras: ventanaDespuesHoras ? Number(ventanaDespuesHoras) : undefined,
       colorPrimario, colorNavbar, colorBoton, colorTextoBoton,
-      colorSecundario, colorHero, colorFondo, colorTexto,
+      colorSecundario, colorHero, colorFondo, colorTexto, tema,
       descripcionCorta, heroTexto, bannerUrl,
       facebook, instagram, tiktok, emailContacto, telefonoContacto,
       stripePublicKey,
