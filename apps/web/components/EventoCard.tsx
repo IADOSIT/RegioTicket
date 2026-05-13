@@ -1,3 +1,4 @@
+'use client';
 import Link from 'next/link';
 import { formatFechaCorta, formatMXN } from '@/lib/utils';
 import { MapPinIcon, CalendarIcon, TicketIcon } from 'lucide-react';
